@@ -1047,7 +1047,8 @@ async def get_employees_for_offboarding(current_user: dict = Depends(get_current
 
 @api_router.patch("/cases/{case_id}/reschedule")
 async def reschedule_case(case_id: str, data: RescheduleRequest, current_user: dict = Depends(get_current_user)):
-    case = await db.cases.find_one({"id": case_id}, {"_id": 0})
+    query = {"id": case_id, **get_org_filter(current_user)}
+    case = await db.cases.find_one(query, {"_id": 0})
     if not case:
         raise HTTPException(status_code=404, detail="Case nicht gefunden")
     
@@ -1065,7 +1066,10 @@ async def reschedule_case(case_id: str, data: RescheduleRequest, current_user: d
 async def update_case_status(case_id: str, status: str, current_user: dict = Depends(get_current_user)):
     if status not in ["active", "completed"]:
         raise HTTPException(status_code=400, detail="Ungültiger Status")
-    await db.cases.update_one({"id": case_id}, {"$set": {"status": status}})
+    query = {"id": case_id, **get_org_filter(current_user)}
+    result = await db.cases.update_one(query, {"$set": {"status": status}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Case nicht gefunden")
     return {"message": "Status aktualisiert"}
 
 # ============ TASKS ROUTES ============
