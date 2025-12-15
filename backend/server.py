@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Form
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
@@ -16,6 +16,7 @@ from jose import JWTError, jwt
 import io
 import base64
 from jinja2 import Environment, FileSystemLoader
+import asyncio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -43,6 +44,99 @@ api_router = APIRouter(prefix="/api")
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# ============ BACKGROUND CRON JOB ============
+
+async def data_retention_cleanup():
+    """Background task for DSGVO-compliant data retention cleanup"""
+    while True:
+        try:
+            # Wait until next run (every 24 hours at 3 AM)
+            now = datetime.now(timezone.utc)
+            next_run = now.replace(hour=3, minute=0, second=0, microsecond=0)
+            if next_run <= now:
+                next_run += timedelta(days=1)
+            wait_seconds = (next_run - now).total_seconds()
+            
+            logger.info(f"Data retention cleanup scheduled for {next_run.isoformat()}")
+            await asyncio.sleep(wait_seconds)
+            
+            # Get retention settings
+            settings = await db.settings.find_one({}, {"_id": 0})
+            retention_days = settings.get("data_retention_days", 1095) if settings else 1095  # Default 3 years
+            audit_retention_days = settings.get("audit_retention_days", 365) if settings else 365  # 1 year for audit logs
+            
+            cutoff_date = (datetime.now(timezone.utc) - timedelta(days=retention_days)).isoformat()
+            audit_cutoff = (datetime.now(timezone.utc) - timedelta(days=audit_retention_days)).isoformat()
+            
+            logger.info(f"Running data retention cleanup. Cutoff: {cutoff_date}")
+            
+            # Find old completed cases
+            old_cases = await db.cases.find({
+                "status": "completed",
+                "created_at": {"$lt": cutoff_date}
+            }, {"_id": 0, "id": 1, "employee_name": 1, "employee_email": 1}).to_list(1000)
+            
+            anonymized_count = 0
+            for case in old_cases:
+                # Anonymize case data
+                anonymized_name = f"Anonymisiert_{case['id'][:8]}"
+                anonymized_email = f"anon_{case['id'][:8]}@anonymized.local"
+                
+                await db.cases.update_one(
+                    {"id": case["id"]},
+                    {"$set": {
+                        "employee_name": anonymized_name,
+                        "employee_email": anonymized_email,
+                        "anonymized_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                
+                # Delete associated evidence files (actual data)
+                case_tasks = await db.tasks.find({"case_id": case["id"]}, {"_id": 0, "id": 1}).to_list(100)
+                for task in case_tasks:
+                    await db.evidence.delete_many({"task_id": task["id"]})
+                
+                anonymized_count += 1
+            
+            # Clean old audit logs (keep structure but remove sensitive details)
+            old_audit_result = await db.audit_logs.update_many(
+                {"timestamp": {"$lt": audit_cutoff}},
+                {"$set": {
+                    "user_name": "Archiviert",
+                    "user_email": "archiviert@system",
+                    "details": "Archiviert gemäß Aufbewahrungsfrist",
+                    "old_value": None,
+                    "new_value": None
+                }}
+            )
+            
+            # Log cleanup result
+            cleanup_log = {
+                "id": str(uuid.uuid4()),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "user_id": "system",
+                "user_email": "system@cron",
+                "user_name": "System Cron",
+                "action": "cleanup",
+                "resource_type": "retention",
+                "details": f"Datenbereinigung: {anonymized_count} Cases anonymisiert, {old_audit_result.modified_count} Audit-Logs archiviert",
+                "old_value": f"retention_days={retention_days}",
+                "new_value": f"cutoff={cutoff_date}"
+            }
+            await db.audit_logs.insert_one(cleanup_log)
+            
+            logger.info(f"Data retention cleanup completed: {anonymized_count} cases anonymized, {old_audit_result.modified_count} audit logs archived")
+            
+        except Exception as e:
+            logger.error(f"Data retention cleanup error: {e}")
+            await asyncio.sleep(3600)  # Wait 1 hour on error before retry
+
+# Start background task on app startup
+@app.on_event("startup")
+async def start_background_tasks():
+    asyncio.create_task(data_retention_cleanup())
+    logger.info("Background data retention task started")
 
 # ============ PYDANTIC MODELS ============
 
