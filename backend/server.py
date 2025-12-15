@@ -140,6 +140,40 @@ async def start_background_tasks():
 
 # ============ PYDANTIC MODELS ============
 
+# License and Organization Models
+class LicenseKeyCreate(BaseModel):
+    count: int = 1
+    user_limit: int = 10
+    notes: str = ""
+
+class LicenseKeyResponse(BaseModel):
+    id: str
+    key: str
+    status: str  # unused, active, revoked
+    user_limit: int
+    notes: str
+    created_at: str
+    activated_at: Optional[str] = None
+    organization_id: Optional[str] = None
+
+class OrganizationBase(BaseModel):
+    name: str
+
+class OrganizationCreate(OrganizationBase):
+    license_key: str
+    admin_name: str
+    admin_email: EmailStr
+    admin_password: str
+
+class OrganizationResponse(OrganizationBase):
+    id: str
+    license_key: str
+    user_limit: int
+    user_count: int
+    status: str
+    created_at: str
+
+# User Models
 class UserBase(BaseModel):
     email: EmailStr
     name: str
@@ -147,6 +181,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    organization_id: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -154,6 +189,9 @@ class UserLogin(BaseModel):
 
 class UserResponse(UserBase):
     id: str
+    organization_id: str
+    organization_name: str
+    is_super_admin: bool = False
     created_at: str
 
 class TokenResponse(BaseModel):
