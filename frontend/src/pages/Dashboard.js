@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { AlertTriangle, Clock, Users, CheckCircle2, ArrowRight, Calendar, UserMinus } from "lucide-react";
+import { AlertTriangle, Clock, Users, CheckCircle2, ArrowRight, Calendar, UserMinus, RefreshCw } from "lucide-react";
 import { format, parseISO, isPast, isWithinInterval, addDays } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -50,7 +50,7 @@ const KPICard = ({ title, value, icon: Icon, variant = "default", onClick }) => 
 };
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({ overdue_tasks: 0, due_in_7_days: 0, active_cases: 0, completed_cases: 0, active_offboardings: 0, completed_offboardings: 0 });
+  const [stats, setStats] = useState({ overdue_tasks: 0, due_in_7_days: 0, active_cases: 0, completed_cases: 0, active_offboardings: 0, completed_offboardings: 0, active_rolechanges: 0, completed_rolechanges: 0 });
   const [cases, setCases] = useState([]);
   const [myTasks, setMyTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +100,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           title="Überfällige Tasks"
           value={stats.overdue_tasks}
@@ -128,6 +128,9 @@ export default function Dashboard() {
           variant="success"
           onClick={() => navigate("/cases?status=completed&case_type=onboarding")}
         />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           title="Aktive Offboardings"
           value={stats.active_offboardings}
@@ -141,6 +144,20 @@ export default function Dashboard() {
           icon={CheckCircle2}
           variant="success"
           onClick={() => navigate("/cases?status=completed&case_type=offboarding")}
+        />
+        <KPICard
+          title="Aktive Rollenwechsel"
+          value={stats.active_rolechanges}
+          icon={RefreshCw}
+          variant={stats.active_rolechanges > 0 ? "warning" : "default"}
+          onClick={() => navigate("/cases?case_type=rolechange")}
+        />
+        <KPICard
+          title="Rollenwechsel Abg."
+          value={stats.completed_rolechanges}
+          icon={CheckCircle2}
+          variant="success"
+          onClick={() => navigate("/cases?status=completed&case_type=rolechange")}
         />
       </div>
 
