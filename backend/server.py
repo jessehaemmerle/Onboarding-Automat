@@ -159,10 +159,12 @@ class OnboardingCaseResponse(BaseModel):
     employee_email: str
     template_id: str
     template_name_snapshot: str
-    start_date: str
+    case_type: str = "onboarding"  # onboarding or offboarding
+    start_date: str  # For offboarding this is exit_date
     location: str
     manager_email: str
     status: str
+    linked_case_id: Optional[str] = None  # Link offboarding to onboarding
     created_by: str
     created_at: str
     tasks: List[TaskResponse] = []
