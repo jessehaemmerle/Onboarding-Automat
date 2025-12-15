@@ -75,13 +75,29 @@ export default function Cases() {
     <div className="space-y-6" data-testid="cases-page">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Onboardings</h1>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+            {caseTypeFilter === "offboarding" ? "Offboardings" : caseTypeFilter === "onboarding" ? "Onboardings" : "Alle Vorgänge"}
+          </h1>
           <p className="text-slate-500 mt-1">{filteredCases.length} Ergebnisse</p>
         </div>
-        <Button onClick={() => navigate("/new-onboarding")} className="btn-primary gap-2" data-testid="new-onboarding">
-          <Plus className="w-4 h-4" /> Neues Onboarding
-        </Button>
+        <div className="flex gap-3">
+          <Button onClick={() => navigate("/new-onboarding")} className="btn-primary gap-2" data-testid="new-onboarding">
+            <Plus className="w-4 h-4" /> Onboarding
+          </Button>
+          <Button onClick={() => navigate("/new-offboarding")} variant="outline" className="gap-2" data-testid="new-offboarding">
+            <UserMinus className="w-4 h-4" /> Offboarding
+          </Button>
+        </div>
       </div>
+
+      {/* Type Tabs */}
+      <Tabs value={caseTypeFilter} onValueChange={(v) => updateFilter("case_type", v)}>
+        <TabsList>
+          <TabsTrigger value="all" data-testid="tab-all">Alle</TabsTrigger>
+          <TabsTrigger value="onboarding" data-testid="tab-onboarding">Onboardings</TabsTrigger>
+          <TabsTrigger value="offboarding" data-testid="tab-offboarding">Offboardings</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-4">
@@ -95,7 +111,7 @@ export default function Cases() {
             data-testid="search-input"
           />
         </div>
-        <Select value={statusFilter} onValueChange={(v) => setSearchParams({ status: v })}>
+        <Select value={statusFilter} onValueChange={(v) => updateFilter("status", v)}>
           <SelectTrigger className="w-[180px]" data-testid="status-filter">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -111,7 +127,7 @@ export default function Cases() {
             <SelectValue placeholder="Sortieren" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="start_date">Startdatum</SelectItem>
+            <SelectItem value="start_date">Datum</SelectItem>
             <SelectItem value="name">Name</SelectItem>
           </SelectContent>
         </Select>
