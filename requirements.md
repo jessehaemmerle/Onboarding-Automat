@@ -14,72 +14,74 @@ Onboarding-Automat (Micro-SaaS) für KMU zur Standardisierung von Onboarding-Pro
 - **Design**: Modern/Corporate
 - **Sprache**: Deutsch
 
-## Implemented Features (MVP)
+## Implemented Features (MVP + Phase 2)
 
 ### Backend (FastAPI + MongoDB)
 - ✅ JWT Authentication (Register/Login)
 - ✅ Role-based Access Control (Admin, Manager, Owner, Readonly)
-- ✅ Template Management (CRUD, Duplicate)
+- ✅ Template Management (CRUD, Duplicate) mit Typ (onboarding/offboarding)
 - ✅ Onboarding Cases (Create, Reschedule, Complete)
+- ✅ **NEUN** Offboarding Cases (eigener Typ, eigene Templates)
 - ✅ Task Management (Status Toggle, Comments)
+- ✅ **NEU** Evidence Upload (Dateien hochladen, herunterladen, löschen)
+- ✅ **NEU** Evidence-Validation (Task nur abschließbar wenn Nachweis vorhanden)
 - ✅ Owner Role Mapping
 - ✅ Organization Settings
-- ✅ Dashboard Statistics
+- ✅ Dashboard Statistics (inkl. Offboarding-Statistiken)
 - ✅ PDF/HTML Report Generation
-- ✅ Seed Data (6 Templates, 5 Owner Roles)
+- ✅ Seed Data (6 Onboarding + 3 Offboarding Templates)
 
 ### Frontend (React + Shadcn UI)
 - ✅ Login/Register Page
-- ✅ Dashboard mit KPI-Kacheln
-- ✅ Case Liste (Suche, Filter, Sortierung)
-- ✅ Case Detail (Tasks, Kommentare, Status)
+- ✅ Dashboard mit 6 KPI-Kacheln (inkl. Offboarding)
+- ✅ Case Liste mit Tabs (Alle/Onboarding/Offboarding)
+- ✅ Case Detail (Tasks, Kommentare, Evidence-Upload, Status)
 - ✅ Neues Onboarding Wizard (2-Step)
+- ✅ **NEU** Neues Offboarding Wizard (Mitarbeiter auswählen)
+- ✅ **NEU** Evidence-Upload UI (Hochladen, Vorschau, Löschen)
 - ✅ Template Verwaltung (Admin)
 - ✅ Template Editor (Admin)
 - ✅ Settings (Owner-Rollen, Org-Einstellungen)
 - ✅ Deutsche UI
 
-### Data Model
-- Users (email, name, role, password_hash)
-- Templates (name, description, tasks[])
-- TemplateTasks (title, category, owner_role, offset_days)
-- OnboardingCases (employee info, template snapshot, start_date, status)
-- Tasks (due_date calculated from offset, status, owner_email)
-- TaskComments (body, user info, timestamps)
-- OwnerRoles (name, emails[])
-- OrgSettings (org_name, timezone, reminder config)
+### Offboarding-Modul
+- Templates: Standard Offboarding, IT-Mitarbeiter Offboarding, Führungskraft Offboarding
+- Tasks inkl.: Zugänge sperren, Assets einfordern, Wissenstransfer, Exit-Interview
+- Mitarbeiter aus bestehendem Onboarding auswählbar
+- Lila Farbkodierung zur Unterscheidung
+- Eigene KPIs im Dashboard
 
-## API Endpoints
-- POST /api/auth/register, /api/auth/login, GET /api/auth/me
-- GET/POST/PUT/DELETE /api/templates, POST /api/templates/{id}/duplicate
-- GET/POST /api/cases, PATCH /api/cases/{id}/reschedule, /status
-- PATCH /api/tasks/{id}/status, GET/POST /api/tasks/{id}/comments
-- GET /api/tasks/my-tasks
-- GET /api/dashboard/stats
-- GET/PUT /api/settings
-- GET/POST/PUT/DELETE /api/owner-roles
-- GET /api/cases/{id}/report (PDF)
-- POST /api/seed
+### Evidence-Upload
+- Dateien bis 10MB (Bilder, PDFs, Office-Dokumente)
+- Anzeige im Task-Modal mit Download/Löschen
+- Task-Validierung: Kann nur abgeschlossen werden wenn Nachweis hochgeladen
+- Audit-Trail: Wer hat wann hochgeladen
 
-## Next Action Items (Phase 2)
+## API Endpoints (Neu/Erweitert)
+- GET /api/cases?case_type=offboarding - Filter nach Typ
+- GET /api/templates?template_type=offboarding - Filter nach Typ
+- GET /api/employees/for-offboarding - Mitarbeiter für Offboarding
+- GET /api/tasks/{id}/evidence - Nachweise abrufen
+- POST /api/tasks/{id}/evidence - Nachweis hochladen
+- GET /api/evidence/{id}/download - Nachweis herunterladen
+- DELETE /api/evidence/{id} - Nachweis löschen
+
+## Next Action Items
 
 ### High Priority
-1. **Offboarding-Modul** - Zugänge schließen, Assets einfordern, Übergaben
-2. **Evidence Upload** - Dokumente/Screenshots an Tasks anhängen
-3. **E-Mail Notifications** - SMTP Integration für Reminder
-4. **Role Change Flow** - Abteilungswechsel mit neuen Tasks
+1. **E-Mail Notifications** - SMTP Integration für Reminder
+2. **Role Change Flow** - Abteilungswechsel mit neuen Tasks
+3. **Audit Log** - Änderungshistorie für Compliance
 
 ### Medium Priority
-5. **Audit Log** - Änderungshistorie für Compliance
-6. **Slack/Teams Integration** - Benachrichtigungen
-7. **Multi-Tenant/MSP** - Mandantenfähigkeit
-8. **SSO Integration** - OAuth/SAML
+4. **Slack/Teams Integration** - Benachrichtigungen
+5. **Multi-Tenant/MSP** - Mandantenfähigkeit
+6. **SSO Integration** - OAuth/SAML
 
 ### Low Priority
-9. **M365/Google Provisioning** - Account-Erstellung
-10. **Jira/Asana Sync** - Task-Synchronisation
-11. **Mobile-optimierte Ansicht**
-12. **White-Label Option**
+7. **M365/Google Provisioning** - Account-Erstellung
+8. **Jira/Asana Sync** - Task-Synchronisation
+9. **Mobile-optimierte Ansicht**
 
 ## Test Credentials
 - Email: admin@test.de
