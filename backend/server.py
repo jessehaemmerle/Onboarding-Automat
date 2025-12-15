@@ -81,26 +81,27 @@ async def data_retention_cleanup():
             }, {"_id": 0, "id": 1, "employee_name": 1, "employee_email": 1}).to_list(1000)
             
             anonymized_count = 0
-            for case in old_cases:
-                # Anonymize case data
-                anonymized_name = f"Anonymisiert_{case['id'][:8]}"
-                anonymized_email = f"anon_{case['id'][:8]}@anonymized.local"
+            if old_cases:
+                # OPTIMIZED: Batch operations instead of individual updates
+                case_ids = [case["id"] for case in old_cases]
+                now_iso = datetime.now(timezone.utc).isoformat()
                 
-                await db.cases.update_one(
-                    {"id": case["id"]},
+                # Batch anonymize all cases at once
+                await db.cases.update_many(
+                    {"id": {"$in": case_ids}},
                     {"$set": {
-                        "employee_name": anonymized_name,
-                        "employee_email": anonymized_email,
-                        "anonymized_at": datetime.now(timezone.utc).isoformat()
+                        "employee_name": "[ANONYMISIERT]",
+                        "employee_email": "[ANONYMISIERT]",
+                        "anonymized_at": now_iso
                     }}
                 )
+                anonymized_count = len(case_ids)
                 
-                # Delete associated evidence files (actual data)
-                case_tasks = await db.tasks.find({"case_id": case["id"]}, {"_id": 0, "id": 1}).to_list(100)
-                for task in case_tasks:
-                    await db.evidence.delete_many({"task_id": task["id"]})
-                
-                anonymized_count += 1
+                # OPTIMIZED: Delete evidence in batch - get all task IDs first, then delete all evidence
+                all_tasks = await db.tasks.find({"case_id": {"$in": case_ids}}, {"_id": 0, "id": 1}).to_list(10000)
+                if all_tasks:
+                    task_ids = [task["id"] for task in all_tasks]
+                    await db.evidence.delete_many({"task_id": {"$in": task_ids}})
             
             # Clean old audit logs (keep structure but remove sensitive details)
             old_audit_result = await db.audit_logs.update_many(
