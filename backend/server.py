@@ -661,6 +661,10 @@ async def get_case(case_id: str, current_user: dict = Depends(get_current_user))
         case["case_type"] = "onboarding"
     if "linked_case_id" not in case:
         case["linked_case_id"] = None
+    if "new_role" not in case:
+        case["new_role"] = None
+    if "old_role" not in case:
+        case["old_role"] = None
     tasks = await db.tasks.find({"case_id": case_id}, {"_id": 0}).to_list(100)
     # Add evidence info to tasks
     for t in tasks:
