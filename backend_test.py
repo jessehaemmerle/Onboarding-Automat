@@ -237,7 +237,8 @@ class OnboardingAutomatTester:
             "template_id": self.template_id,
             "start_date": (datetime.now() + timedelta(days=1)).isoformat(),
             "location": "Berlin",
-            "manager_email": "manager@example.com"
+            "manager_email": "manager@example.com",
+            "case_type": "onboarding"
         }
         
         success, response = self.run_test(
@@ -257,6 +258,14 @@ class OnboardingAutomatTester:
                 "Get all cases",
                 "GET",
                 "cases",
+                200
+            )
+            
+            # Get cases filtered by type
+            self.run_test(
+                "Get onboarding cases only",
+                "GET",
+                "cases?case_type=onboarding",
                 200
             )
             
