@@ -424,7 +424,18 @@ async def get_case(case_id: str, current_user: dict = Depends(get_current_user))
     case = await db.cases.find_one({"id": case_id}, {"_id": 0})
     if not case:
         raise HTTPException(status_code=404, detail="Case nicht gefunden")
+    # Backward compatibility
+    if "case_type" not in case:
+        case["case_type"] = "onboarding"
+    if "linked_case_id" not in case:
+        case["linked_case_id"] = None
     tasks = await db.tasks.find({"case_id": case_id}, {"_id": 0}).to_list(100)
+    # Add evidence info to tasks
+    for t in tasks:
+        if "evidence_required" not in t:
+            t["evidence_required"] = False
+        evidence_count = await db.evidence.count_documents({"task_id": t["id"]})
+        t["evidence_uploaded"] = evidence_count > 0
     case["tasks"] = tasks
     return OnboardingCaseResponse(**case)
 
@@ -444,10 +455,12 @@ async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(g
         "employee_email": data.employee_email,
         "template_id": data.template_id,
         "template_name_snapshot": template["name"],
+        "case_type": data.case_type,
         "start_date": data.start_date,
         "location": data.location,
         "manager_email": data.manager_email,
         "status": "active",
+        "linked_case_id": data.linked_case_id,
         "created_by": current_user["id"],
         "created_at": now
     }
@@ -468,15 +481,43 @@ async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(g
             "offset_days": t["offset_days"],
             "due_date": due_date.isoformat(),
             "status": "open",
+            "evidence_required": t.get("evidence_required", False),
             "completed_at": None,
             "completed_by": None,
             "created_at": now
         }
         await db.tasks.insert_one(task_doc)
+        task_doc["evidence_uploaded"] = False
         tasks.append(task_doc)
     
     case_doc["tasks"] = tasks
     return OnboardingCaseResponse(**case_doc)
+
+# Get employees for offboarding (from completed onboardings)
+@api_router.get("/employees/for-offboarding")
+async def get_employees_for_offboarding(current_user: dict = Depends(get_current_user)):
+    # Get all onboarding cases that are completed or active (employee exists)
+    cases = await db.cases.find(
+        {"case_type": {"$in": ["onboarding", None]}},
+        {"_id": 0, "id": 1, "employee_name": 1, "employee_email": 1, "location": 1, "manager_email": 1, "status": 1}
+    ).to_list(1000)
+    
+    # Filter out employees that already have an active offboarding
+    active_offboardings = await db.cases.distinct("employee_email", {"case_type": "offboarding", "status": "active"})
+    
+    employees = []
+    for c in cases:
+        if c["employee_email"] not in active_offboardings:
+            employees.append({
+                "onboarding_case_id": c["id"],
+                "employee_name": c["employee_name"],
+                "employee_email": c["employee_email"],
+                "location": c.get("location", ""),
+                "manager_email": c["manager_email"],
+                "status": c["status"]
+            })
+    
+    return employees
 
 @api_router.patch("/cases/{case_id}/reschedule")
 async def reschedule_case(case_id: str, data: RescheduleRequest, current_user: dict = Depends(get_current_user)):
