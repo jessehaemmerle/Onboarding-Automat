@@ -148,12 +148,12 @@ export default function AuditLog() {
               </SelectContent>
             </Select>
 
-            <Select value={filters.resource_type} onValueChange={(v) => setFilters({ ...filters, resource_type: v })}>
+            <Select value={filters.resource_type || "all"} onValueChange={(v) => setFilters({ ...filters, resource_type: v === "all" ? "" : v })}>
               <SelectTrigger className="w-[180px]" data-testid="filter-resource">
                 <SelectValue placeholder="Ressource" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Alle Ressourcen</SelectItem>
+                <SelectItem value="all">Alle Ressourcen</SelectItem>
                 <SelectItem value="user">Benutzer</SelectItem>
                 <SelectItem value="case">Onboarding</SelectItem>
                 <SelectItem value="task">Task</SelectItem>
