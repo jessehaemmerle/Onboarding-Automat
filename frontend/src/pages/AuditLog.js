@@ -133,12 +133,12 @@ export default function AuditLog() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4">
-            <Select value={filters.action} onValueChange={(v) => setFilters({ ...filters, action: v })}>
+            <Select value={filters.action || "all"} onValueChange={(v) => setFilters({ ...filters, action: v === "all" ? "" : v })}>
               <SelectTrigger className="w-[180px]" data-testid="filter-action">
                 <SelectValue placeholder="Aktion" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Alle Aktionen</SelectItem>
+                <SelectItem value="all">Alle Aktionen</SelectItem>
                 <SelectItem value="create">Erstellt</SelectItem>
                 <SelectItem value="update">Geändert</SelectItem>
                 <SelectItem value="delete">Gelöscht</SelectItem>
