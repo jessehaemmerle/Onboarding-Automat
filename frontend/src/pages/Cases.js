@@ -8,7 +8,7 @@ import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Search, Plus, Calendar, ArrowUpDown, Users, UserMinus, Paperclip } from "lucide-react";
+import { Search, Plus, Calendar, ArrowUpDown, Users, UserMinus, Paperclip, RefreshCw } from "lucide-react";
 import { format, parseISO, isPast } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -76,7 +76,7 @@ export default function Cases() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-            {caseTypeFilter === "offboarding" ? "Offboardings" : caseTypeFilter === "onboarding" ? "Onboardings" : "Alle Vorgänge"}
+            {caseTypeFilter === "offboarding" ? "Offboardings" : caseTypeFilter === "onboarding" ? "Onboardings" : caseTypeFilter === "rolechange" ? "Rollenwechsel" : "Alle Vorgänge"}
           </h1>
           <p className="text-slate-500 mt-1">{filteredCases.length} Ergebnisse</p>
         </div>
@@ -87,6 +87,9 @@ export default function Cases() {
           <Button onClick={() => navigate("/new-offboarding")} variant="outline" className="gap-2" data-testid="new-offboarding">
             <UserMinus className="w-4 h-4" /> Offboarding
           </Button>
+          <Button onClick={() => navigate("/new-rolechange")} variant="outline" className="gap-2 bg-orange-50 hover:bg-orange-100 border-orange-200" data-testid="new-rolechange">
+            <RefreshCw className="w-4 h-4" /> Rollenwechsel
+          </Button>
         </div>
       </div>
 
@@ -96,6 +99,7 @@ export default function Cases() {
           <TabsTrigger value="all" data-testid="tab-all">Alle</TabsTrigger>
           <TabsTrigger value="onboarding" data-testid="tab-onboarding">Onboardings</TabsTrigger>
           <TabsTrigger value="offboarding" data-testid="tab-offboarding">Offboardings</TabsTrigger>
+          <TabsTrigger value="rolechange" data-testid="tab-rolechange">Rollenwechsel</TabsTrigger>
         </TabsList>
       </Tabs>
 
