@@ -713,10 +713,19 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     if current_user["role"] == "manager":
         case_query["manager_email"] = current_user["email"]
     
-    active = await db.cases.count_documents({**case_query, "status": "active"})
-    completed = await db.cases.count_documents({**case_query, "status": "completed"})
+    active = await db.cases.count_documents({**case_query, "status": "active", "case_type": {"$in": ["onboarding", None]}})
+    completed = await db.cases.count_documents({**case_query, "status": "completed", "case_type": {"$in": ["onboarding", None]}})
+    active_offboardings = await db.cases.count_documents({**case_query, "status": "active", "case_type": "offboarding"})
+    completed_offboardings = await db.cases.count_documents({**case_query, "status": "completed", "case_type": "offboarding"})
     
-    return DashboardStats(overdue_tasks=overdue, due_in_7_days=due_soon, active_cases=active, completed_cases=completed)
+    return DashboardStats(
+        overdue_tasks=overdue,
+        due_in_7_days=due_soon,
+        active_cases=active,
+        completed_cases=completed,
+        active_offboardings=active_offboardings,
+        completed_offboardings=completed_offboardings
+    )
 
 # ============ ORG SETTINGS ROUTES ============
 
