@@ -387,10 +387,12 @@ async def resolve_owner_email(owner_role: str) -> str:
     return ""
 
 @api_router.get("/cases", response_model=List[OnboardingCaseResponse])
-async def get_cases(status: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+async def get_cases(status: Optional[str] = None, case_type: Optional[str] = None, current_user: dict = Depends(get_current_user)):
     query = {}
     if status:
         query["status"] = status
+    if case_type:
+        query["case_type"] = case_type
     
     if current_user["role"] == "manager":
         query["manager_email"] = current_user["email"]
@@ -401,7 +403,18 @@ async def get_cases(status: Optional[str] = None, current_user: dict = Depends(g
     cases = await db.cases.find(query, {"_id": 0}).to_list(1000)
     result = []
     for c in cases:
+        # Backward compatibility
+        if "case_type" not in c:
+            c["case_type"] = "onboarding"
+        if "linked_case_id" not in c:
+            c["linked_case_id"] = None
         tasks = await db.tasks.find({"case_id": c["id"]}, {"_id": 0}).to_list(100)
+        # Add evidence info to tasks
+        for t in tasks:
+            if "evidence_required" not in t:
+                t["evidence_required"] = False
+            evidence_count = await db.evidence.count_documents({"task_id": t["id"]})
+            t["evidence_uploaded"] = evidence_count > 0
         c["tasks"] = tasks
         result.append(OnboardingCaseResponse(**c))
     return result
