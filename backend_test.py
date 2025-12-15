@@ -421,6 +421,212 @@ class OnboardingAutomatTester:
         
         return success
 
+    def test_rolechange_flow(self):
+        """Test complete rolechange flow implementation"""
+        self.log("\n=== TESTING ROLECHANGE FLOW ===")
+        
+        # Step 1: Create a rolechange template
+        rolechange_template_data = {
+            "name": "Standard Rollenwechsel",
+            "description": "Template für interne Rollenwechsel",
+            "template_type": "rolechange",
+            "tasks": [
+                {
+                    "title": "Neue Zugriffsrechte einrichten",
+                    "description": "Berechtigungen für neue Rolle konfigurieren",
+                    "category": "IT",
+                    "owner_role": "IT",
+                    "offset_days": -3,
+                    "evidence_required": False,
+                    "sort_order": 1
+                },
+                {
+                    "title": "Alte Zugriffsrechte entziehen",
+                    "description": "Nicht mehr benötigte Berechtigungen entfernen",
+                    "category": "Security",
+                    "owner_role": "Security",
+                    "offset_days": -1,
+                    "evidence_required": True,
+                    "sort_order": 2
+                },
+                {
+                    "title": "Rollenwechsel-Meeting durchführen",
+                    "description": "Übergabegespräch mit Manager",
+                    "category": "Manager",
+                    "owner_role": "Manager",
+                    "offset_days": 0,
+                    "evidence_required": False,
+                    "sort_order": 3
+                }
+            ]
+        }
+        
+        success, response = self.run_test(
+            "Create rolechange template",
+            "POST",
+            "templates",
+            200,
+            data=rolechange_template_data
+        )
+        
+        if success and 'id' in response:
+            self.rolechange_template_id = response['id']
+            self.log(f"✅ Created rolechange template with ID: {self.rolechange_template_id}")
+            
+            # Verify template type is correctly set
+            template_type = response.get('template_type')
+            if template_type == 'rolechange':
+                self.log("✅ Template type correctly set to 'rolechange'")
+            else:
+                self.log(f"❌ Expected template_type 'rolechange', got '{template_type}'")
+        else:
+            self.log("❌ Failed to create rolechange template")
+            return False
+        
+        # Step 2: Test template filtering by rolechange type
+        success, response = self.run_test(
+            "Get rolechange templates only",
+            "GET",
+            "templates?template_type=rolechange",
+            200
+        )
+        
+        if success and response:
+            rolechange_templates = response
+            found_our_template = any(t['id'] == self.rolechange_template_id for t in rolechange_templates)
+            if found_our_template:
+                self.log(f"✅ Template filtering works - found {len(rolechange_templates)} rolechange templates")
+            else:
+                self.log("❌ Template filtering failed - our rolechange template not found")
+        
+        # Step 3: Create a rolechange case
+        rolechange_case_data = {
+            "employee_name": "Max Mustermann",
+            "employee_email": "max.mustermann@startmate.de",
+            "template_id": self.rolechange_template_id,
+            "start_date": (datetime.now() + timedelta(days=7)).isoformat(),  # Transition date
+            "location": "Berlin",
+            "manager_email": "manager@startmate.de",
+            "case_type": "rolechange",
+            "old_role": "Junior Developer",
+            "new_role": "Senior Developer"
+        }
+        
+        success, response = self.run_test(
+            "Create rolechange case",
+            "POST",
+            "cases",
+            200,
+            data=rolechange_case_data
+        )
+        
+        if success and 'id' in response:
+            self.rolechange_case_id = response['id']
+            self.log(f"✅ Created rolechange case with ID: {self.rolechange_case_id}")
+            
+            # Verify rolechange-specific fields
+            case_type = response.get('case_type')
+            old_role = response.get('old_role')
+            new_role = response.get('new_role')
+            
+            if case_type == 'rolechange':
+                self.log("✅ Case type correctly set to 'rolechange'")
+            else:
+                self.log(f"❌ Expected case_type 'rolechange', got '{case_type}'")
+            
+            if old_role == 'Junior Developer':
+                self.log("✅ Old role correctly stored")
+            else:
+                self.log(f"❌ Expected old_role 'Junior Developer', got '{old_role}'")
+            
+            if new_role == 'Senior Developer':
+                self.log("✅ New role correctly stored")
+            else:
+                self.log(f"❌ Expected new_role 'Senior Developer', got '{new_role}'")
+            
+            # Verify tasks were created
+            tasks = response.get('tasks', [])
+            if len(tasks) == 3:
+                self.log(f"✅ All {len(tasks)} tasks created from template")
+            else:
+                self.log(f"❌ Expected 3 tasks, got {len(tasks)}")
+        else:
+            self.log("❌ Failed to create rolechange case")
+            return False
+        
+        # Step 4: Test case retrieval with rolechange fields
+        success, response = self.run_test(
+            "Get rolechange case details",
+            "GET",
+            f"cases/{self.rolechange_case_id}",
+            200
+        )
+        
+        if success and response:
+            case_type = response.get('case_type')
+            old_role = response.get('old_role')
+            new_role = response.get('new_role')
+            
+            if case_type == 'rolechange' and old_role == 'Junior Developer' and new_role == 'Senior Developer':
+                self.log("✅ Rolechange case retrieval with all fields working correctly")
+            else:
+                self.log(f"❌ Case retrieval failed - type: {case_type}, old: {old_role}, new: {new_role}")
+        
+        # Step 5: Test case filtering by rolechange type
+        success, response = self.run_test(
+            "Get rolechange cases only",
+            "GET",
+            "cases?case_type=rolechange",
+            200
+        )
+        
+        if success and response:
+            rolechange_cases = response
+            found_our_case = any(c['id'] == self.rolechange_case_id for c in rolechange_cases)
+            if found_our_case:
+                self.log(f"✅ Case filtering works - found {len(rolechange_cases)} rolechange cases")
+            else:
+                self.log("❌ Case filtering failed - our rolechange case not found")
+        
+        return success
+
+    def test_dashboard_with_rolechanges(self):
+        """Test dashboard statistics with rolechange counts"""
+        self.log("\n=== TESTING DASHBOARD WITH ROLECHANGE STATS ===")
+        
+        success, response = self.run_test(
+            "Get dashboard stats with rolechanges",
+            "GET",
+            "dashboard/stats",
+            200
+        )
+        
+        if success and response:
+            stats = response
+            required_fields = [
+                'overdue_tasks', 'due_in_7_days', 'active_cases', 
+                'completed_cases', 'active_offboardings', 'completed_offboardings',
+                'active_rolechanges', 'completed_rolechanges'
+            ]
+            
+            missing_fields = [field for field in required_fields if field not in stats]
+            
+            if not missing_fields:
+                self.log("✅ All 8 KPI fields present in dashboard stats")
+                self.log(f"   Active rolechanges: {stats.get('active_rolechanges', 0)}")
+                self.log(f"   Completed rolechanges: {stats.get('completed_rolechanges', 0)}")
+                
+                # Verify we have at least 1 active rolechange from our test
+                if stats.get('active_rolechanges', 0) >= 1:
+                    self.log("✅ Dashboard correctly shows active rolechange count")
+                else:
+                    self.log("⚠️ Expected at least 1 active rolechange in dashboard")
+            else:
+                self.log(f"❌ Missing KPI fields: {missing_fields}")
+                return False
+        
+        return success
+
     def test_evidence_upload(self):
         """Test evidence upload functionality"""
         self.log("\n=== TESTING EVIDENCE UPLOAD ===")
