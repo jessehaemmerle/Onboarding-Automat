@@ -868,6 +868,7 @@ async def seed_data():
     templates = [
         {
             "id": str(uuid.uuid4()), "name": "Entwickler", "description": "Onboarding für Software-Entwickler",
+            "template_type": "onboarding",
             "created_at": now, "updated_at": now,
             "tasks": [
                 {"id": str(uuid.uuid4()), "title": "Laptop bereitstellen", "description": "MacBook/Windows nach Präferenz", "category": "IT", "owner_role": "IT", "offset_days": -3, "evidence_required": False, "sort_order": 1},
@@ -884,6 +885,7 @@ async def seed_data():
         },
         {
             "id": str(uuid.uuid4()), "name": "Sales", "description": "Onboarding für Vertriebsmitarbeiter",
+            "template_type": "onboarding",
             "created_at": now, "updated_at": now,
             "tasks": [
                 {"id": str(uuid.uuid4()), "title": "Laptop bereitstellen", "description": "", "category": "IT", "owner_role": "IT", "offset_days": -3, "evidence_required": False, "sort_order": 1},
@@ -898,6 +900,7 @@ async def seed_data():
         },
         {
             "id": str(uuid.uuid4()), "name": "Marketing", "description": "Onboarding für Marketing-Team",
+            "template_type": "onboarding",
             "created_at": now, "updated_at": now,
             "tasks": [
                 {"id": str(uuid.uuid4()), "title": "Laptop bereitstellen", "description": "", "category": "IT", "owner_role": "IT", "offset_days": -3, "evidence_required": False, "sort_order": 1},
@@ -910,6 +913,7 @@ async def seed_data():
         },
         {
             "id": str(uuid.uuid4()), "name": "Finance", "description": "Onboarding für Finanzabteilung",
+            "template_type": "onboarding",
             "created_at": now, "updated_at": now,
             "tasks": [
                 {"id": str(uuid.uuid4()), "title": "Laptop bereitstellen", "description": "", "category": "IT", "owner_role": "IT", "offset_days": -3, "evidence_required": False, "sort_order": 1},
@@ -922,6 +926,7 @@ async def seed_data():
         },
         {
             "id": str(uuid.uuid4()), "name": "Support", "description": "Onboarding für Kundensupport",
+            "template_type": "onboarding",
             "created_at": now, "updated_at": now,
             "tasks": [
                 {"id": str(uuid.uuid4()), "title": "Laptop bereitstellen", "description": "", "category": "IT", "owner_role": "IT", "offset_days": -3, "evidence_required": False, "sort_order": 1},
@@ -934,6 +939,7 @@ async def seed_data():
         },
         {
             "id": str(uuid.uuid4()), "name": "Praktikant", "description": "Onboarding für Praktikanten",
+            "template_type": "onboarding",
             "created_at": now, "updated_at": now,
             "tasks": [
                 {"id": str(uuid.uuid4()), "title": "Laptop/Arbeitsgerät", "description": "", "category": "IT", "owner_role": "IT", "offset_days": 0, "evidence_required": False, "sort_order": 1},
@@ -941,6 +947,57 @@ async def seed_data():
                 {"id": str(uuid.uuid4()), "title": "Praktikumsvertrag", "description": "", "category": "Admin", "owner_role": "HR", "offset_days": -5, "evidence_required": True, "sort_order": 3},
                 {"id": str(uuid.uuid4()), "title": "Betreuer zuweisen", "description": "", "category": "Manager", "owner_role": "Manager", "offset_days": -3, "evidence_required": False, "sort_order": 4},
                 {"id": str(uuid.uuid4()), "title": "Projektplan erstellen", "description": "", "category": "Manager", "owner_role": "Manager", "offset_days": 1, "evidence_required": False, "sort_order": 5},
+            ]
+        },
+        # ============ OFFBOARDING TEMPLATES ============
+        {
+            "id": str(uuid.uuid4()), "name": "Standard Offboarding", "description": "Allgemeines Offboarding für alle Mitarbeiter",
+            "template_type": "offboarding",
+            "created_at": now, "updated_at": now,
+            "tasks": [
+                {"id": str(uuid.uuid4()), "title": "Exit-Interview planen", "description": "Feedback-Gespräch vereinbaren", "category": "Manager", "owner_role": "Manager", "offset_days": -7, "evidence_required": False, "sort_order": 1},
+                {"id": str(uuid.uuid4()), "title": "Wissenstransfer dokumentieren", "description": "Übergabedokumentation erstellen", "category": "Manager", "owner_role": "Manager", "offset_days": -5, "evidence_required": True, "sort_order": 2},
+                {"id": str(uuid.uuid4()), "title": "Nachfolger einarbeiten", "description": "", "category": "Manager", "owner_role": "Manager", "offset_days": -3, "evidence_required": False, "sort_order": 3},
+                {"id": str(uuid.uuid4()), "title": "E-Mail-Weiterleitung einrichten", "description": "Automatische Weiterleitung an Nachfolger", "category": "IT", "owner_role": "IT", "offset_days": 0, "evidence_required": False, "sort_order": 4},
+                {"id": str(uuid.uuid4()), "title": "Alle Zugänge deaktivieren", "description": "AD, VPN, Cloud-Dienste, etc.", "category": "Security", "owner_role": "Security", "offset_days": 0, "evidence_required": True, "sort_order": 5},
+                {"id": str(uuid.uuid4()), "title": "Laptop einsammeln", "description": "Hardware zurückgeben lassen", "category": "IT", "owner_role": "IT", "offset_days": 0, "evidence_required": True, "sort_order": 6},
+                {"id": str(uuid.uuid4()), "title": "Firmenschlüssel/Badge einziehen", "description": "", "category": "Admin", "owner_role": "Office", "offset_days": 0, "evidence_required": True, "sort_order": 7},
+                {"id": str(uuid.uuid4()), "title": "Arbeitszeugnis erstellen", "description": "", "category": "Admin", "owner_role": "HR", "offset_days": 0, "evidence_required": False, "sort_order": 8},
+                {"id": str(uuid.uuid4()), "title": "Abschlussabrechnung vorbereiten", "description": "Resturlaub, Überstunden", "category": "Admin", "owner_role": "HR", "offset_days": 0, "evidence_required": False, "sort_order": 9},
+                {"id": str(uuid.uuid4()), "title": "Exit-Interview durchführen", "description": "Feedback-Gespräch dokumentieren", "category": "Manager", "owner_role": "Manager", "offset_days": 0, "evidence_required": True, "sort_order": 10},
+            ]
+        },
+        {
+            "id": str(uuid.uuid4()), "name": "IT-Mitarbeiter Offboarding", "description": "Spezielles Offboarding für IT/Entwickler mit erhöhten Zugriffsrechten",
+            "template_type": "offboarding",
+            "created_at": now, "updated_at": now,
+            "tasks": [
+                {"id": str(uuid.uuid4()), "title": "Alle Passwörter ändern", "description": "Shared Accounts, Adminzugänge", "category": "Security", "owner_role": "Security", "offset_days": -3, "evidence_required": True, "sort_order": 1},
+                {"id": str(uuid.uuid4()), "title": "SSH-Keys entfernen", "description": "Aus allen Servern entfernen", "category": "IT", "owner_role": "IT", "offset_days": -2, "evidence_required": True, "sort_order": 2},
+                {"id": str(uuid.uuid4()), "title": "Code-Review offener PRs", "description": "", "category": "Manager", "owner_role": "Manager", "offset_days": -2, "evidence_required": False, "sort_order": 3},
+                {"id": str(uuid.uuid4()), "title": "GitHub/GitLab Zugang entfernen", "description": "", "category": "IT", "owner_role": "IT", "offset_days": 0, "evidence_required": True, "sort_order": 4},
+                {"id": str(uuid.uuid4()), "title": "Cloud-Konsolen Zugang sperren", "description": "AWS, Azure, GCP", "category": "Security", "owner_role": "Security", "offset_days": 0, "evidence_required": True, "sort_order": 5},
+                {"id": str(uuid.uuid4()), "title": "API-Keys rotieren", "description": "Alle vom MA erstellten Keys", "category": "Security", "owner_role": "Security", "offset_days": 0, "evidence_required": True, "sort_order": 6},
+                {"id": str(uuid.uuid4()), "title": "Laptop einsammeln und löschen", "description": "Sichere Datenlöschung", "category": "IT", "owner_role": "IT", "offset_days": 0, "evidence_required": True, "sort_order": 7},
+                {"id": str(uuid.uuid4()), "title": "Dokumentation aktualisieren", "description": "Wiki, Runbooks updaten", "category": "IT", "owner_role": "IT", "offset_days": 0, "evidence_required": False, "sort_order": 8},
+                {"id": str(uuid.uuid4()), "title": "On-Call Rotation anpassen", "description": "", "category": "Manager", "owner_role": "Manager", "offset_days": -1, "evidence_required": False, "sort_order": 9},
+                {"id": str(uuid.uuid4()), "title": "Security-Audit durchführen", "description": "Prüfen ob alle Zugänge entfernt", "category": "Security", "owner_role": "Security", "offset_days": 1, "evidence_required": True, "sort_order": 10},
+            ]
+        },
+        {
+            "id": str(uuid.uuid4()), "name": "Führungskraft Offboarding", "description": "Offboarding für Manager und Führungskräfte",
+            "template_type": "offboarding",
+            "created_at": now, "updated_at": now,
+            "tasks": [
+                {"id": str(uuid.uuid4()), "title": "Nachfolger kommunizieren", "description": "Intern und extern", "category": "Manager", "owner_role": "HR", "offset_days": -14, "evidence_required": False, "sort_order": 1},
+                {"id": str(uuid.uuid4()), "title": "Team-Übergabe planen", "description": "", "category": "Manager", "owner_role": "Manager", "offset_days": -10, "evidence_required": True, "sort_order": 2},
+                {"id": str(uuid.uuid4()), "title": "Kundenkontakte übergeben", "description": "Wichtige Kontakte vorstellen", "category": "Manager", "owner_role": "Manager", "offset_days": -7, "evidence_required": False, "sort_order": 3},
+                {"id": str(uuid.uuid4()), "title": "Budget-Verantwortung übertragen", "description": "", "category": "Admin", "owner_role": "HR", "offset_days": -5, "evidence_required": True, "sort_order": 4},
+                {"id": str(uuid.uuid4()), "title": "Unterschriftsberechtigungen entziehen", "description": "", "category": "Admin", "owner_role": "HR", "offset_days": 0, "evidence_required": True, "sort_order": 5},
+                {"id": str(uuid.uuid4()), "title": "Firmenkreditkarte sperren", "description": "", "category": "Admin", "owner_role": "HR", "offset_days": 0, "evidence_required": True, "sort_order": 6},
+                {"id": str(uuid.uuid4()), "title": "LinkedIn-Profil aktualisieren", "description": "Firmenverbindung entfernen", "category": "Admin", "owner_role": "HR", "offset_days": 0, "evidence_required": False, "sort_order": 7},
+                {"id": str(uuid.uuid4()), "title": "Alle Zugänge deaktivieren", "description": "", "category": "Security", "owner_role": "Security", "offset_days": 0, "evidence_required": True, "sort_order": 8},
+                {"id": str(uuid.uuid4()), "title": "Exit-Interview mit GF", "description": "", "category": "Manager", "owner_role": "HR", "offset_days": 0, "evidence_required": True, "sort_order": 9},
             ]
         },
     ]
