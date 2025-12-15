@@ -325,6 +325,7 @@ export default function CaseDetail() {
                 normal: "border-l-slate-300",
               };
               const canEdit = isAdmin || task.owner_email === user?.email;
+              const needsEvidence = task.evidence_required && !task.evidence_uploaded && task.status === "open";
 
               return (
                 <Card key={task.id} className={`border-l-4 ${priorityStyles[priority]}`} data-testid={`task-item-${task.id}`}>
@@ -339,11 +340,17 @@ export default function CaseDetail() {
                         />
                       )}
                       <div className="flex-1 cursor-pointer" onClick={() => openTaskModal(task)}>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h4 className={`font-medium ${task.status === "done" ? "text-slate-400 line-through" : "text-slate-900"}`}>
                             {task.title}
                           </h4>
                           {priority === "overdue" && <Badge variant="destructive" className="text-xs">Überfällig</Badge>}
+                          {task.evidence_required && (
+                            <Badge variant={task.evidence_uploaded ? "secondary" : "outline"} className={`text-xs ${task.evidence_uploaded ? "bg-emerald-100 text-emerald-700" : needsEvidence ? "text-amber-600 border-amber-300" : ""}`}>
+                              <Paperclip className="w-3 h-3 mr-1" />
+                              {task.evidence_uploaded ? "Nachweis vorhanden" : "Nachweis erforderlich"}
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
                           <span className="flex items-center gap-1">
