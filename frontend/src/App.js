@@ -14,6 +14,7 @@ import TemplateEditor from "./pages/TemplateEditor";
 import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
 import PrivacyCenter from "./pages/PrivacyCenter";
+import AdminPanel from "./pages/AdminPanel";
 import Layout from "./components/Layout";
 
 const ProtectedRoute = ({ children }) => {
@@ -43,6 +44,7 @@ function App() {
             <Route path="settings" element={<Settings />} />
             <Route path="audit-log" element={<AuditLog />} />
             <Route path="privacy" element={<PrivacyCenter />} />
+            <Route path="admin" element={<AdminPanel />} />
           </Route>
         </Routes>
         <Toaster position="top-right" richColors />
