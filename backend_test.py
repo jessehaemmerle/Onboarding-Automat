@@ -646,8 +646,10 @@ class OnboardingAutomatTester:
             self.test_templates,
             self.test_owner_roles,
             self.test_onboarding_cases,
+            self.test_offboarding_cases,
+            self.test_evidence_upload,
             self.test_tasks,
-            self.test_dashboard,
+            self.test_dashboard_with_offboarding,
             self.test_settings,
             self.test_users,
             self.test_pdf_report
