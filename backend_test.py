@@ -128,7 +128,7 @@ class OnboardingAutomatTester:
         """Test template management"""
         self.log("\n=== TESTING TEMPLATES ===")
         
-        # Get templates
+        # Get all templates
         success, response = self.run_test(
             "Get all templates",
             "GET",
@@ -139,8 +139,29 @@ class OnboardingAutomatTester:
         if success and response:
             templates = response
             if len(templates) > 0:
-                self.template_id = templates[0]['id']
+                # Find onboarding template
+                onboarding_templates = [t for t in templates if t.get('template_type') == 'onboarding']
+                if onboarding_templates:
+                    self.template_id = onboarding_templates[0]['id']
+                else:
+                    self.template_id = templates[0]['id']
+                
                 self.log(f"✅ Found {len(templates)} templates")
+                
+                # Test filtering by template type
+                self.run_test(
+                    "Get onboarding templates",
+                    "GET",
+                    "templates?template_type=onboarding",
+                    200
+                )
+                
+                self.run_test(
+                    "Get offboarding templates",
+                    "GET",
+                    "templates?template_type=offboarding",
+                    200
+                )
                 
                 # Get specific template
                 self.run_test(
