@@ -25,6 +25,7 @@ export default function TemplateEditor() {
   const [template, setTemplate] = useState({
     name: "",
     description: "",
+    template_type: "onboarding",
     tasks: [],
   });
 
@@ -114,6 +115,7 @@ export default function TemplateEditor() {
       const payload = {
         name: template.name,
         description: template.description,
+        template_type: template.template_type || "onboarding",
         tasks: template.tasks.map((t, i) => ({
           title: t.title,
           description: t.description || "",
@@ -170,7 +172,7 @@ export default function TemplateEditor() {
           <CardTitle>Template-Informationen</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
               <Input
@@ -190,6 +192,22 @@ export default function TemplateEditor() {
                 onChange={(e) => setTemplate({ ...template, description: e.target.value })}
                 data-testid="template-description"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="type">Template-Typ *</Label>
+              <Select
+                value={template.template_type || "onboarding"}
+                onValueChange={(v) => setTemplate({ ...template, template_type: v })}
+              >
+                <SelectTrigger id="type" data-testid="template-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="onboarding">Onboarding</SelectItem>
+                  <SelectItem value="offboarding">Offboarding</SelectItem>
+                  <SelectItem value="rolechange">Rollenwechsel</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
