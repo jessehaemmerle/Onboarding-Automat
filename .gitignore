@@ -31,9 +31,17 @@ dist/
 dist
 
 # Environment files (comprehensive coverage)
-
+.env
+.env.*
+backend/.env
+frontend/.env
 *token.json*
 *credentials.json*
+
+# Security Keys - NEVER COMMIT!
+PRODUCTION_KEYS.md
+*.key
+*.pem
 
 # Logs and debug files
 npm-debug.log*
