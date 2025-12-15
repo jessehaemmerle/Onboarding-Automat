@@ -421,6 +421,14 @@ def create_access_token(data: dict) -> str:
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+def generate_license_key() -> str:
+    """Generate a license key in format OA-XXXX-XXXX-XXXX"""
+    import random
+    import string
+    chars = string.ascii_uppercase + string.digits
+    parts = [''.join(random.choices(chars, k=4)) for _ in range(3)]
+    return f"OA-{'-'.join(parts)}"
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
@@ -433,12 +441,33 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
     if user is None:
         raise HTTPException(status_code=401, detail="Benutzer nicht gefunden")
+    
+    # Add organization info
+    if user.get("organization_id"):
+        org = await db.organizations.find_one({"id": user["organization_id"]}, {"_id": 0, "name": 1})
+        user["organization_name"] = org["name"] if org else "Unknown"
+    else:
+        user["organization_name"] = "Unknown"
+    
+    # Check if super admin
+    user["is_super_admin"] = user.get("is_super_admin", False)
+    
     return user
 
 async def require_admin(current_user: dict = Depends(get_current_user)):
-    if current_user.get("role") != "admin":
+    if current_user.get("role") != "admin" and not current_user.get("is_super_admin"):
         raise HTTPException(status_code=403, detail="Admin-Rechte erforderlich")
     return current_user
+
+async def require_super_admin(current_user: dict = Depends(get_current_user)):
+    if not current_user.get("is_super_admin"):
+        raise HTTPException(status_code=403, detail="Super-Admin-Rechte erforderlich")
+    return current_user
+
+def verify_master_key(key: str):
+    if key != MASTER_ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="Ungültiger Master-Admin-Key")
+    return True
 
 # ============ AUTH ROUTES ============
 
