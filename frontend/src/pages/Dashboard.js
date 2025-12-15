@@ -100,7 +100,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <KPICard
           title="Überfällige Tasks"
           value={stats.overdue_tasks}
@@ -119,14 +119,28 @@ export default function Dashboard() {
           title="Aktive Onboardings"
           value={stats.active_cases}
           icon={Users}
-          onClick={() => navigate("/cases")}
+          onClick={() => navigate("/cases?case_type=onboarding")}
         />
         <KPICard
-          title="Abgeschlossen"
+          title="Onb. Abgeschlossen"
           value={stats.completed_cases}
           icon={CheckCircle2}
           variant="success"
-          onClick={() => navigate("/cases?status=completed")}
+          onClick={() => navigate("/cases?status=completed&case_type=onboarding")}
+        />
+        <KPICard
+          title="Aktive Offboardings"
+          value={stats.active_offboardings}
+          icon={UserMinus}
+          variant={stats.active_offboardings > 0 ? "purple" : "default"}
+          onClick={() => navigate("/cases?case_type=offboarding")}
+        />
+        <KPICard
+          title="Offb. Abgeschlossen"
+          value={stats.completed_offboardings}
+          icon={CheckCircle2}
+          variant="success"
+          onClick={() => navigate("/cases?status=completed&case_type=offboarding")}
         />
       </div>
 
