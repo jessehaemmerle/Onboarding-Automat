@@ -616,30 +616,32 @@ async def register(user_data: UserCreate, current_user: dict = Depends(require_a
     if existing:
         raise HTTPException(status_code=400, detail="E-Mail bereits registriert")
     
-    user_count = await db.users.count_documents({})
     user_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
+    org_id = current_user["organization_id"]
     
     user_doc = {
         "id": user_id,
         "email": user_data.email,
         "name": user_data.name,
-        "role": "admin" if user_count == 0 else user_data.role,
-        "password_hash": get_password_hash(user_data.password),
+        "role": user_data.role,
+        "organization_id": org_id,
+        "is_super_admin": False,
+        "hashed_password": get_password_hash(user_data.password),
         "created_at": now,
-        "privacy_accepted_at": now,  # DSGVO: Consent tracking
+        "privacy_accepted_at": now,
         "data_processing_accepted_at": now
     }
     await db.users.insert_one(user_doc)
     
     # Audit Log
     await log_audit(
-        user={"id": user_id, "email": user_data.email, "name": user_data.name},
+        user=current_user,
         action="create",
         resource_type="user",
         resource_id=user_id,
         resource_name=user_data.email,
-        details="Neuer Benutzer registriert"
+        details=f"Neuer Benutzer registriert von {current_user['email']}"
     )
     
     # Record consent
@@ -654,7 +656,16 @@ async def register(user_data: UserCreate, current_user: dict = Depends(require_a
     token = create_access_token({"sub": user_id})
     return TokenResponse(
         access_token=token,
-        user=UserResponse(id=user_id, email=user_data.email, name=user_data.name, role=user_doc["role"], created_at=now)
+        user=UserResponse(
+            id=user_id,
+            email=user_data.email,
+            name=user_data.name,
+            role=user_doc["role"],
+            organization_id=org_id,
+            organization_name=current_user["organization_name"],
+            is_super_admin=False,
+            created_at=now
+        )
     )
 
 @api_router.post("/auth/login", response_model=TokenResponse)
