@@ -24,6 +24,17 @@ export default function Layout() {
 
   const initials = user?.name?.split(" ").map(n => n[0]).join("").toUpperCase() || "U";
 
+  const navItems = [
+    { to: "/", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/cases", label: "Vorgänge", icon: Users },
+    { to: "/templates", label: "Templates", icon: FolderKanban },
+    { to: "/settings", label: "Einstellungen", icon: Settings },
+  ];
+
+  const adminNavItems = isAdmin ? [
+    { to: "/admin", label: "System Admin", icon: Shield },
+  ] : [];
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}
@@ -34,7 +45,7 @@ export default function Layout() {
         </div>
         
         <nav className="flex-1 p-4 space-y-1">
-          {navItems.filter(item => !item.adminOnly || isAdmin).map(item => (
+          {navItems.map(item => (
             <NavLink
               key={item.to}
               to={item.to}
