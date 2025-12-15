@@ -1,0 +1,179 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "Onboarding-Automat",
+      "persona": "E1 - Soft Utility",
+      "vibe": "Efficient, Trustworthy, Modern, Human-Centric",
+      "theme_strategy": "Light Mode Dominant (Swiss Style) with High-Contrast Data"
+    },
+    "typography": {
+      "fonts": {
+        "headings": {
+          "family": "Plus Jakarta Sans, sans-serif",
+          "weights": ["600", "700"],
+          "usage": "All H1-H4, Modal Titles, KPI Values",
+          "cdn_import": "@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&display=swap');"
+        },
+        "body": {
+          "family": "Inter, sans-serif",
+          "weights": ["400", "500"],
+          "usage": "Paragraphs, Table Data, Form Labels, Inputs",
+          "cdn_import": "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');"
+        },
+        "mono": {
+          "family": "JetBrains Mono, monospace",
+          "weights": ["400"],
+          "usage": "IDs, API Keys, Audit Logs",
+          "cdn_import": "@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap');"
+        }
+      },
+      "rules": {
+        "h1": "text-4xl font-bold tracking-tight text-slate-900 mb-6",
+        "h2": "text-2xl font-semibold tracking-tight text-slate-900 mb-4",
+        "h3": "text-xl font-semibold text-slate-800 mb-3",
+        "body": "text-sm text-slate-600 leading-relaxed",
+        "label": "text-xs font-medium uppercase tracking-wider text-slate-500",
+        "kpi_value": "text-3xl font-bold text-slate-900 tracking-tight"
+      }
+    },
+    "colors": {
+      "palette": {
+        "primary": {
+          "base": "bg-blue-600",
+          "hover": "hover:bg-blue-700",
+          "text": "text-blue-600",
+          "ring": "ring-blue-600",
+          "description": "Electric Navy - Trust & Action"
+        },
+        "background": {
+          "page": "bg-slate-50",
+          "card": "bg-white",
+          "subtle": "bg-slate-100"
+        },
+        "text": {
+          "main": "text-slate-900",
+          "muted": "text-slate-500",
+          "inverted": "text-white"
+        },
+        "status": {
+          "success": "text-emerald-600 bg-emerald-50 border-emerald-200",
+          "warning": "text-amber-600 bg-amber-50 border-amber-200",
+          "error": "text-rose-600 bg-rose-50 border-rose-200",
+          "neutral": "text-slate-600 bg-slate-100 border-slate-200"
+        }
+      },
+      "gradients": {
+        "hero": "bg-gradient-to-br from-blue-50 to-slate-100",
+        "accent": "bg-gradient-to-r from-blue-600 to-indigo-600"
+      }
+    },
+    "layout": {
+      "spacing": {
+        "container_padding": "p-6 md:p-8 lg:p-12",
+        "section_gap": "gap-8",
+        "item_gap": "gap-4"
+      },
+      "grids": {
+        "dashboard": {
+          "name": "Control Room Grid",
+          "classes": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6",
+          "rules": "KPIs span 1, Main Charts span 2 or 3, Lists span 1 row-span-2"
+        },
+        "detail_view": {
+          "name": "Tetris Grid",
+          "classes": "grid grid-cols-1 lg:grid-cols-12 gap-8",
+          "rules": "Main content col-span-8, Sidebar/Meta col-span-4"
+        }
+      },
+      "radius": {
+        "default": "rounded-lg",
+        "button": "rounded-md",
+        "card": "rounded-xl"
+      }
+    },
+    "components": {
+      "buttons": {
+        "primary": "bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md transition-all duration-200 font-medium px-4 py-2 rounded-md",
+        "secondary": "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 shadow-sm transition-all duration-200 font-medium px-4 py-2 rounded-md",
+        "ghost": "text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-2 rounded-md"
+      },
+      "cards": {
+        "base": "bg-white border border-slate-200 shadow-sm rounded-xl p-6 hover:shadow-md transition-shadow duration-300",
+        "interactive": "cursor-pointer hover:border-blue-300 hover:ring-1 hover:ring-blue-100"
+      },
+      "inputs": {
+        "base": "flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      },
+      "badges": {
+        "base": "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      }
+    },
+    "visual_enhancers": {
+      "shadows": {
+        "soft": "shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
+        "float": "shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+      },
+      "borders": {
+        "subtle": "border border-slate-100",
+        "default": "border border-slate-200",
+        "active": "border-blue-200"
+      },
+      "glass": "bg-white/80 backdrop-blur-md border-b border-slate-200/50"
+    },
+    "motion": {
+      "transitions": "transition-all duration-200 ease-in-out",
+      "hover_lift": "hover:-translate-y-0.5",
+      "page_enter": "animate-in fade-in slide-in-from-bottom-4 duration-500"
+    }
+  },
+  "assets": {
+    "images": {
+      "login_hero": {
+        "url": "https://images.unsplash.com/photo-1758691736975-9f7f643d178e?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Diverse team collaborating in modern office",
+        "usage": "Login page split screen image"
+      },
+      "dashboard_empty_state": {
+        "url": "https://images.unsplash.com/photo-1567457483108-c71174599bc6?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Minimalist abstract white shapes",
+        "usage": "Background for empty states or 404 pages"
+      },
+      "avatars": [
+        {
+          "url": "https://images.unsplash.com/photo-1576558656222-ba66febe3dec?crop=entropy&cs=srgb&fm=jpg&q=85",
+          "alt": "Male professional headshot"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1689600944138-da3b150d9cb8?crop=entropy&cs=srgb&fm=jpg&q=85",
+          "alt": "Female professional headshot"
+        }
+      ]
+    },
+    "icons": {
+      "library": "lucide-react",
+      "style": "Stroke width 1.5px, size 16px-20px for UI, 24px for Nav"
+    }
+  },
+  "implementation_guide": {
+    "steps": [
+      "1. Setup Tailwind Config: Extend theme with 'Plus Jakarta Sans' and custom colors.",
+      "2. Global CSS: Import fonts, set body background to slate-50.",
+      "3. Layout Shell: Create Sidebar + Header layout using the 'Glass' style for header.",
+      "4. Dashboard: Implement 'Control Room' grid with KPI cards.",
+      "5. Onboarding Wizard: Use 'Tetris' grid, focus on generous spacing (p-8).",
+      "6. Task Lists: Use Shadcn Table but add 'hover_lift' to rows for interactivity."
+    ],
+    "anti_patterns": [
+      "DO NOT use default Shadcn 'slate' colors without tinting them (use our defined palette).",
+      "DO NOT use 'Inter' for Headings.",
+      "DO NOT make the dashboard dense like Excel. Use whitespace.",
+      "DO NOT use pure black (#000000). Use slate-900."
+    ],
+    "universal_rules": [
+      "All interactive elements must have data-testid attributes.",
+      "Use 'sonner' for all toast notifications.",
+      "Ensure all text has sufficient contrast (APCA/WCAG AA).",
+      "Mobile-first: Always verify grid-cols-1 on mobile before expanding."
+    ]
+  }
+}
