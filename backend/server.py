@@ -879,24 +879,25 @@ async def duplicate_template(template_id: str, admin: dict = Depends(require_adm
 
 # ============ ONBOARDING/OFFBOARDING CASES ROUTES ============
 
-async def resolve_owner_email(owner_role: str) -> str:
-    role = await db.owner_roles.find_one({"name": owner_role}, {"_id": 0})
+async def resolve_owner_email(owner_role: str, organization_id: str) -> str:
+    role = await db.owner_roles.find_one({"name": owner_role, "organization_id": organization_id}, {"_id": 0})
     if role and role.get("emails"):
         return role["emails"][0]
     return ""
 
 @api_router.get("/cases", response_model=List[OnboardingCaseResponse])
 async def get_cases(status: Optional[str] = None, case_type: Optional[str] = None, current_user: dict = Depends(get_current_user)):
-    query = {}
+    query = get_org_filter(current_user)
     if status:
         query["status"] = status
     if case_type:
         query["case_type"] = case_type
     
-    if current_user["role"] == "manager":
+    if current_user["role"] == "manager" and not current_user.get("is_super_admin"):
         query["manager_email"] = current_user["email"]
-    elif current_user["role"] == "owner":
-        task_cases = await db.tasks.distinct("case_id", {"owner_email": current_user["email"]})
+    elif current_user["role"] == "owner" and not current_user.get("is_super_admin"):
+        task_query = {"owner_email": current_user["email"], **get_org_filter(current_user)}
+        task_cases = await db.tasks.distinct("case_id", task_query)
         query["id"] = {"$in": task_cases}
     
     cases = await db.cases.find(query, {"_id": 0}).to_list(1000)
