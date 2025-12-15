@@ -971,12 +971,22 @@ async def get_case(case_id: str, current_user: dict = Depends(get_current_user))
     if "old_role" not in case:
         case["old_role"] = None
     tasks = await db.tasks.find({"case_id": case_id}, {"_id": 0}).to_list(100)
-    # Add evidence info to tasks
-    for t in tasks:
-        if "evidence_required" not in t:
-            t["evidence_required"] = False
-        evidence_count = await db.evidence.count_documents({"task_id": t["id"]})
-        t["evidence_uploaded"] = evidence_count > 0
+    
+    # OPTIMIZED: Batch fetch evidence counts in ONE aggregation instead of N queries
+    if tasks:
+        task_ids = [t["id"] for t in tasks]
+        evidence_pipeline = [
+            {"$match": {"task_id": {"$in": task_ids}}},
+            {"$group": {"_id": "$task_id", "count": {"$sum": 1}}}
+        ]
+        evidence_counts = {doc["_id"]: doc["count"] for doc in await db.evidence.aggregate(evidence_pipeline).to_list(100)}
+        
+        # Add evidence info to tasks
+        for t in tasks:
+            if "evidence_required" not in t:
+                t["evidence_required"] = False
+            t["evidence_uploaded"] = evidence_counts.get(t["id"], 0) > 0
+    
     case["tasks"] = tasks
     return OnboardingCaseResponse(**case)
 
