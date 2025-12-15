@@ -317,9 +317,30 @@ async def register(user_data: UserCreate):
         "name": user_data.name,
         "role": "admin" if user_count == 0 else user_data.role,
         "password_hash": get_password_hash(user_data.password),
-        "created_at": now
+        "created_at": now,
+        "privacy_accepted_at": now,  # DSGVO: Consent tracking
+        "data_processing_accepted_at": now
     }
     await db.users.insert_one(user_doc)
+    
+    # Audit Log
+    await log_audit(
+        user={"id": user_id, "email": user_data.email, "name": user_data.name},
+        action="create",
+        resource_type="user",
+        resource_id=user_id,
+        resource_name=user_data.email,
+        details="Neuer Benutzer registriert"
+    )
+    
+    # Record consent
+    await db.consents.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "consent_type": "privacy_policy",
+        "consented": True,
+        "consented_at": now
+    })
     
     token = create_access_token({"sub": user_id})
     return TokenResponse(
@@ -331,7 +352,26 @@ async def register(user_data: UserCreate):
 async def login(credentials: UserLogin):
     user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
     if not user or not verify_password(credentials.password, user.get("password_hash", "")):
+        # Log failed attempt (without user details for security)
+        await db.audit_logs.insert_one({
+            "id": str(uuid.uuid4()),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "user_id": "unknown",
+            "user_email": credentials.email,
+            "user_name": "Unknown",
+            "action": "login_failed",
+            "resource_type": "auth",
+            "details": "Fehlgeschlagener Login-Versuch"
+        })
         raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten")
+    
+    # Audit Log
+    await log_audit(
+        user=user,
+        action="login",
+        resource_type="auth",
+        details="Erfolgreicher Login"
+    )
     
     token = create_access_token({"sub": user["id"]})
     return TokenResponse(
@@ -347,6 +387,7 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 
 @api_router.get("/users", response_model=List[UserResponse])
 async def get_users(current_user: dict = Depends(get_current_user)):
+    await log_audit(user=current_user, action="access", resource_type="user", details="Benutzerliste abgerufen")
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
     return [UserResponse(**u) for u in users]
 
@@ -354,7 +395,23 @@ async def get_users(current_user: dict = Depends(get_current_user)):
 async def update_user(user_id: str, role: str, admin: dict = Depends(require_admin)):
     if role not in ["admin", "manager", "owner", "readonly"]:
         raise HTTPException(status_code=400, detail="Ungültige Rolle")
+    
+    old_user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    old_role = old_user.get("role") if old_user else None
+    
     await db.users.update_one({"id": user_id}, {"$set": {"role": role}})
+    
+    await log_audit(
+        user=admin,
+        action="update",
+        resource_type="user",
+        resource_id=user_id,
+        resource_name=old_user.get("email") if old_user else None,
+        details="Benutzerrolle geändert",
+        old_value=old_role,
+        new_value=role
+    )
+    
     return {"message": "Benutzer aktualisiert"}
 
 # ============ OWNER ROLES ROUTES ============
