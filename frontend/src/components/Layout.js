@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { LayoutDashboard, Users, FolderKanban, Settings, LogOut, Plus, FileText } from "lucide-react";
+import { LayoutDashboard, Users, FolderKanban, Settings, LogOut, Plus, FileText, ScrollText, Shield } from "lucide-react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "./ui/dropdown-menu";
@@ -9,6 +9,7 @@ const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/cases", icon: Users, label: "Onboardings" },
   { to: "/templates", icon: FileText, label: "Templates", adminOnly: true },
+  { to: "/audit-log", icon: ScrollText, label: "Audit-Log", adminOnly: true },
   { to: "/settings", icon: Settings, label: "Einstellungen", adminOnly: true },
 ];
 
