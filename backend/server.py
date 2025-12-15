@@ -1241,8 +1241,8 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
                 logger.warning(f"Failed to parse due_date {t['due_date']}: {e}")
                 continue
     
-    case_query = {}
-    if current_user["role"] == "manager":
+    case_query = {**org_filter}
+    if current_user["role"] == "manager" and not current_user.get("is_super_admin"):
         case_query["manager_email"] = current_user["email"]
     
     active = await db.cases.count_documents({**case_query, "status": "active", "case_type": {"$in": ["onboarding", None]}})
