@@ -1147,6 +1147,373 @@ async def seed_data():
     
     return {"message": "Seed-Daten erfolgreich erstellt", "templates": len(templates), "owner_roles": len(owner_roles)}
 
+# ============ AUDIT LOG ROUTES (DSGVO Art. 30) ============
+
+@api_router.get("/audit-logs")
+async def get_audit_logs(
+    page: int = 1,
+    page_size: int = 50,
+    action: Optional[str] = None,
+    resource_type: Optional[str] = None,
+    user_id: Optional[str] = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    admin: dict = Depends(require_admin)
+):
+    """Get audit logs - Admin only (DSGVO Art. 30 - Verzeichnis von Verarbeitungstätigkeiten)"""
+    query = {}
+    if action:
+        query["action"] = action
+    if resource_type:
+        query["resource_type"] = resource_type
+    if user_id:
+        query["user_id"] = user_id
+    if from_date:
+        query["timestamp"] = {"$gte": from_date}
+    if to_date:
+        if "timestamp" in query:
+            query["timestamp"]["$lte"] = to_date
+        else:
+            query["timestamp"] = {"$lte": to_date}
+    
+    total = await db.audit_logs.count_documents(query)
+    skip = (page - 1) * page_size
+    
+    entries = await db.audit_logs.find(query, {"_id": 0}).sort("timestamp", -1).skip(skip).limit(page_size).to_list(page_size)
+    
+    await log_audit(user=admin, action="access", resource_type="audit_log", details=f"Audit-Log abgerufen (Seite {page})")
+    
+    return {
+        "entries": entries,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    }
+
+@api_router.get("/audit-logs/export")
+async def export_audit_logs(
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    admin: dict = Depends(require_admin)
+):
+    """Export audit logs as CSV (DSGVO Art. 30)"""
+    query = {}
+    if from_date:
+        query["timestamp"] = {"$gte": from_date}
+    if to_date:
+        if "timestamp" in query:
+            query["timestamp"]["$lte"] = to_date
+        else:
+            query["timestamp"] = {"$lte": to_date}
+    
+    entries = await db.audit_logs.find(query, {"_id": 0}).sort("timestamp", -1).to_list(10000)
+    
+    # Create CSV
+    import csv
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Zeitstempel", "Benutzer", "E-Mail", "Aktion", "Ressource-Typ", "Ressource-ID", "Details", "Alter Wert", "Neuer Wert"])
+    for e in entries:
+        writer.writerow([
+            e.get("timestamp", ""),
+            e.get("user_name", ""),
+            e.get("user_email", ""),
+            e.get("action", ""),
+            e.get("resource_type", ""),
+            e.get("resource_id", ""),
+            e.get("details", ""),
+            e.get("old_value", ""),
+            e.get("new_value", "")
+        ])
+    
+    await log_audit(user=admin, action="export", resource_type="audit_log", details="Audit-Log exportiert")
+    
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode("utf-8")),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=audit_log_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"}
+    )
+
+# ============ DSGVO/GDPR ROUTES ============
+
+@api_router.get("/gdpr/my-data")
+async def get_my_data(current_user: dict = Depends(get_current_user)):
+    """DSGVO Art. 15 - Auskunftsrecht: Alle Daten des Benutzers abrufen"""
+    user_id = current_user["id"]
+    user_email = current_user["email"]
+    
+    # Collect all user data
+    user_data = await db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 0})
+    
+    # Cases created by user
+    cases_created = await db.cases.find({"created_by": user_id}, {"_id": 0}).to_list(1000)
+    
+    # Tasks assigned to user
+    tasks_assigned = await db.tasks.find({"owner_email": user_email}, {"_id": 0}).to_list(1000)
+    
+    # Comments by user
+    comments = await db.task_comments.find({"user_id": user_id}, {"_id": 0}).to_list(1000)
+    
+    # Evidence uploaded by user
+    evidence = await db.evidence.find({"uploaded_by": user_email}, {"_id": 0, "file_data": 0}).to_list(1000)
+    
+    # Consents
+    consents = await db.consents.find({"user_id": user_id}, {"_id": 0}).to_list(100)
+    
+    # Audit logs related to user
+    audit_logs = await db.audit_logs.find({"user_id": user_id}, {"_id": 0}).sort("timestamp", -1).limit(100).to_list(100)
+    
+    await log_audit(user=current_user, action="export", resource_type="personal_data", details="Eigene Daten abgerufen (DSGVO Art. 15)")
+    
+    return {
+        "user": user_data,
+        "cases_created": cases_created,
+        "tasks_assigned": tasks_assigned,
+        "comments": comments,
+        "evidence_uploaded": evidence,
+        "consents": consents,
+        "recent_activities": audit_logs,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "data_categories": [
+            {"category": "Stammdaten", "description": "Name, E-Mail, Rolle"},
+            {"category": "Nutzungsdaten", "description": "Erstellte Onboardings, zugewiesene Tasks"},
+            {"category": "Kommunikation", "description": "Kommentare zu Tasks"},
+            {"category": "Nachweise", "description": "Hochgeladene Dateien"},
+            {"category": "Protokolldaten", "description": "Login-Aktivitäten, Änderungen"}
+        ]
+    }
+
+@api_router.get("/gdpr/export")
+async def export_my_data(format: str = "json", current_user: dict = Depends(get_current_user)):
+    """DSGVO Art. 20 - Datenübertragbarkeit: Daten in portablem Format exportieren"""
+    data = await get_my_data(current_user)
+    
+    await log_audit(user=current_user, action="export", resource_type="personal_data", details=f"Datenexport im Format {format} (DSGVO Art. 20)")
+    
+    if format == "json":
+        import json
+        content = json.dumps(data, indent=2, ensure_ascii=False, default=str)
+        return StreamingResponse(
+            io.BytesIO(content.encode("utf-8")),
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename=meine_daten_{datetime.now(timezone.utc).strftime('%Y%m%d')}.json"}
+        )
+    else:
+        # CSV export
+        import csv
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # User data
+        writer.writerow(["=== STAMMDATEN ==="])
+        writer.writerow(["Feld", "Wert"])
+        if data.get("user"):
+            for key, value in data["user"].items():
+                writer.writerow([key, value])
+        
+        writer.writerow([])
+        writer.writerow(["=== ERSTELLTE ONBOARDINGS ==="])
+        if data.get("cases_created"):
+            writer.writerow(["ID", "Mitarbeiter", "E-Mail", "Template", "Status", "Erstellt am"])
+            for c in data["cases_created"]:
+                writer.writerow([c.get("id"), c.get("employee_name"), c.get("employee_email"), c.get("template_name_snapshot"), c.get("status"), c.get("created_at")])
+        
+        writer.writerow([])
+        writer.writerow(["=== ZUGEWIESENE TASKS ==="])
+        if data.get("tasks_assigned"):
+            writer.writerow(["ID", "Titel", "Status", "Fällig", "Erstellt am"])
+            for t in data["tasks_assigned"]:
+                writer.writerow([t.get("id"), t.get("title"), t.get("status"), t.get("due_date"), t.get("created_at")])
+        
+        return StreamingResponse(
+            io.BytesIO(output.getvalue().encode("utf-8")),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=meine_daten_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"}
+        )
+
+@api_router.post("/gdpr/delete-request")
+async def request_data_deletion(request: DataDeletionRequest, current_user: dict = Depends(get_current_user)):
+    """DSGVO Art. 17 - Recht auf Löschung: Löschantrag stellen"""
+    if not request.confirm:
+        raise HTTPException(status_code=400, detail="Bitte bestätigen Sie den Löschantrag")
+    
+    user_id = current_user["id"]
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Create deletion request
+    deletion_request = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "user_email": current_user["email"],
+        "user_name": current_user["name"],
+        "requested_at": now,
+        "reason": request.reason,
+        "status": "pending",  # pending, approved, completed, rejected
+        "processed_at": None,
+        "processed_by": None
+    }
+    await db.deletion_requests.insert_one(deletion_request)
+    
+    await log_audit(
+        user=current_user,
+        action="create",
+        resource_type="deletion_request",
+        resource_id=deletion_request["id"],
+        details=f"Löschantrag gestellt (DSGVO Art. 17). Grund: {request.reason or 'Nicht angegeben'}"
+    )
+    
+    return {
+        "message": "Löschantrag eingereicht",
+        "request_id": deletion_request["id"],
+        "status": "pending",
+        "info": "Ein Administrator wird Ihren Antrag innerhalb von 30 Tagen bearbeiten (DSGVO Art. 12 Abs. 3)"
+    }
+
+@api_router.get("/gdpr/deletion-requests")
+async def get_deletion_requests(admin: dict = Depends(require_admin)):
+    """Admin: Alle Löschanträge abrufen"""
+    requests = await db.deletion_requests.find({}, {"_id": 0}).sort("requested_at", -1).to_list(100)
+    return requests
+
+@api_router.post("/gdpr/deletion-requests/{request_id}/process")
+async def process_deletion_request(request_id: str, action: str, admin: dict = Depends(require_admin)):
+    """Admin: Löschantrag bearbeiten"""
+    if action not in ["approve", "reject"]:
+        raise HTTPException(status_code=400, detail="Ungültige Aktion")
+    
+    deletion_req = await db.deletion_requests.find_one({"id": request_id}, {"_id": 0})
+    if not deletion_req:
+        raise HTTPException(status_code=404, detail="Löschantrag nicht gefunden")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    if action == "approve":
+        user_id = deletion_req["user_id"]
+        user_email = deletion_req["user_email"]
+        
+        # Anonymize user data instead of hard delete (for audit trail)
+        anonymized_name = f"Gelöschter Benutzer {user_id[:8]}"
+        anonymized_email = f"deleted_{user_id[:8]}@anonymized.local"
+        
+        # Update user
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {
+                "name": anonymized_name,
+                "email": anonymized_email,
+                "role": "deleted",
+                "password_hash": "",
+                "deleted_at": now,
+                "deleted_reason": deletion_req.get("reason")
+            }}
+        )
+        
+        # Anonymize comments
+        await db.task_comments.update_many(
+            {"user_id": user_id},
+            {"$set": {"user_name": anonymized_name, "user_email": anonymized_email}}
+        )
+        
+        # Delete evidence files (actual data)
+        await db.evidence.delete_many({"uploaded_by": user_email})
+        
+        # Anonymize audit logs
+        await db.audit_logs.update_many(
+            {"user_id": user_id},
+            {"$set": {"user_name": anonymized_name, "user_email": anonymized_email}}
+        )
+        
+        # Update deletion request
+        await db.deletion_requests.update_one(
+            {"id": request_id},
+            {"$set": {"status": "completed", "processed_at": now, "processed_by": admin["email"]}}
+        )
+        
+        await log_audit(
+            user=admin,
+            action="delete",
+            resource_type="user",
+            resource_id=user_id,
+            details=f"Löschantrag genehmigt und Daten anonymisiert (DSGVO Art. 17)"
+        )
+        
+        return {"message": "Benutzerdaten wurden anonymisiert", "status": "completed"}
+    
+    else:  # reject
+        await db.deletion_requests.update_one(
+            {"id": request_id},
+            {"$set": {"status": "rejected", "processed_at": now, "processed_by": admin["email"]}}
+        )
+        
+        await log_audit(
+            user=admin,
+            action="update",
+            resource_type="deletion_request",
+            resource_id=request_id,
+            details="Löschantrag abgelehnt"
+        )
+        
+        return {"message": "Löschantrag wurde abgelehnt", "status": "rejected"}
+
+@api_router.get("/gdpr/consents")
+async def get_my_consents(current_user: dict = Depends(get_current_user)):
+    """DSGVO Art. 7 - Einwilligungen des Benutzers abrufen"""
+    consents = await db.consents.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(100)
+    return consents
+
+@api_router.post("/gdpr/consents/{consent_type}/revoke")
+async def revoke_consent(consent_type: str, current_user: dict = Depends(get_current_user)):
+    """DSGVO Art. 7 Abs. 3 - Einwilligung widerrufen"""
+    now = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.consents.update_one(
+        {"user_id": current_user["id"], "consent_type": consent_type, "revoked_at": None},
+        {"$set": {"revoked_at": now}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Einwilligung nicht gefunden oder bereits widerrufen")
+    
+    await log_audit(
+        user=current_user,
+        action="update",
+        resource_type="consent",
+        details=f"Einwilligung widerrufen: {consent_type} (DSGVO Art. 7 Abs. 3)"
+    )
+    
+    return {"message": f"Einwilligung '{consent_type}' wurde widerrufen"}
+
+@api_router.get("/gdpr/privacy-info")
+async def get_privacy_info():
+    """DSGVO Art. 13/14 - Datenschutzinformationen"""
+    settings = await db.settings.find_one({}, {"_id": 0})
+    
+    return {
+        "data_controller": {
+            "name": settings.get("org_name", "Meine Firma") if settings else "Meine Firma",
+            "dpo_email": settings.get("dpo_email", "") if settings else ""
+        },
+        "data_categories": [
+            {"category": "Stammdaten", "description": "Name, E-Mail-Adresse, Rolle", "retention": "Bis zur Löschung des Kontos", "legal_basis": "Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO)"},
+            {"category": "Onboarding-Daten", "description": "Mitarbeiterdaten, Startdatum, Standort", "retention": "3 Jahre nach Abschluss", "legal_basis": "Berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO)"},
+            {"category": "Aufgabendaten", "description": "Task-Status, Kommentare, Nachweise", "retention": "3 Jahre nach Abschluss", "legal_basis": "Vertragserfüllung"},
+            {"category": "Protokolldaten", "description": "Login-Zeiten, Änderungshistorie", "retention": "1 Jahr", "legal_basis": "Berechtigtes Interesse (Sicherheit)"}
+        ],
+        "rights": [
+            {"right": "Auskunftsrecht", "article": "Art. 15 DSGVO", "description": "Sie können jederzeit Auskunft über Ihre gespeicherten Daten verlangen."},
+            {"right": "Berichtigungsrecht", "article": "Art. 16 DSGVO", "description": "Sie können die Berichtigung unrichtiger Daten verlangen."},
+            {"right": "Löschungsrecht", "article": "Art. 17 DSGVO", "description": "Sie können die Löschung Ihrer Daten verlangen."},
+            {"right": "Einschränkung der Verarbeitung", "article": "Art. 18 DSGVO", "description": "Sie können die Einschränkung der Verarbeitung verlangen."},
+            {"right": "Datenübertragbarkeit", "article": "Art. 20 DSGVO", "description": "Sie können Ihre Daten in einem portablen Format erhalten."},
+            {"right": "Widerspruchsrecht", "article": "Art. 21 DSGVO", "description": "Sie können der Verarbeitung widersprechen."},
+            {"right": "Beschwerderecht", "article": "Art. 77 DSGVO", "description": "Sie können sich bei einer Aufsichtsbehörde beschweren."}
+        ],
+        "data_retention": {
+            "default_days": settings.get("data_retention_days", 1095) if settings else 1095,
+            "description": "Daten werden nach der angegebenen Zeit automatisch gelöscht oder anonymisiert."
+        }
+    }
+
 # Include router and middleware
 app.include_router(api_router)
 
