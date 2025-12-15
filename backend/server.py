@@ -510,11 +510,24 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     due_soon = 0
     for t in all_tasks:
         if t["status"] == "open":
-            due = datetime.fromisoformat(t["due_date"].replace("Z", "+00:00"))
-            if due < now:
-                overdue += 1
-            elif due <= seven_days:
-                due_soon += 1
+            due_str = t["due_date"]
+            if due_str.endswith("Z"):
+                due_str = due_str.replace("Z", "+00:00")
+            elif "+" not in due_str and "T" in due_str:
+                due_str = due_str + "+00:00"
+            
+            try:
+                due = datetime.fromisoformat(due_str)
+                if due.tzinfo is None:
+                    due = due.replace(tzinfo=timezone.utc)
+                
+                if due < now:
+                    overdue += 1
+                elif due <= seven_days:
+                    due_soon += 1
+            except Exception as e:
+                logger.warning(f"Failed to parse due_date {t['due_date']}: {e}")
+                continue
     
     case_query = {}
     if current_user["role"] == "manager":
