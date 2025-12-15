@@ -469,10 +469,149 @@ def verify_master_key(key: str):
         raise HTTPException(status_code=403, detail="Ungültiger Master-Admin-Key")
     return True
 
+# ============ LICENSE & ORGANIZATION ROUTES ============
+
+@api_router.post("/admin/generate-license-keys", response_model=List[LicenseKeyResponse])
+async def generate_license_keys(
+    data: LicenseKeyCreate,
+    master_key: str = Depends(lambda req: req.headers.get("X-Master-Key"))
+):
+    """Generate new license keys - requires Master Admin Key"""
+    verify_master_key(master_key)
+    
+    now = datetime.now(timezone.utc).isoformat()
+    keys = []
+    
+    for _ in range(data.count):
+        key = generate_license_key()
+        license_doc = {
+            "id": str(uuid.uuid4()),
+            "key": key,
+            "status": "unused",
+            "user_limit": data.user_limit,
+            "notes": data.notes,
+            "created_at": now,
+            "activated_at": None,
+            "organization_id": None
+        }
+        await db.license_keys.insert_one(license_doc)
+        keys.append(LicenseKeyResponse(**license_doc))
+    
+    logger.info(f"Generated {data.count} license keys with limit {data.user_limit}")
+    return keys
+
+@api_router.post("/auth/register-organization", response_model=TokenResponse)
+async def register_organization(data: OrganizationCreate):
+    """Register a new organization with a license key"""
+    # Validate license key
+    license_key = await db.license_keys.find_one({"key": data.license_key}, {"_id": 0})
+    if not license_key:
+        raise HTTPException(status_code=400, detail="Ungültiger Lizenzschlüssel")
+    
+    if license_key["status"] != "unused":
+        raise HTTPException(status_code=400, detail="Lizenzschlüssel wurde bereits verwendet")
+    
+    # Check if email already exists
+    existing_user = await db.users.find_one({"email": data.admin_email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="E-Mail-Adresse wird bereits verwendet")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    org_id = str(uuid.uuid4())
+    
+    # Create organization
+    org_doc = {
+        "id": org_id,
+        "name": data.name,
+        "license_key": data.license_key,
+        "user_limit": license_key["user_limit"],
+        "status": "active",
+        "created_at": now
+    }
+    await db.organizations.insert_one(org_doc)
+    
+    # Create admin user
+    user_id = str(uuid.uuid4())
+    user_doc = {
+        "id": user_id,
+        "email": data.admin_email,
+        "name": data.admin_name,
+        "role": "admin",
+        "organization_id": org_id,
+        "is_super_admin": False,
+        "hashed_password": get_password_hash(data.admin_password),
+        "created_at": now
+    }
+    await db.users.insert_one(user_doc)
+    
+    # Update license key status
+    await db.license_keys.update_one(
+        {"id": license_key["id"]},
+        {"$set": {
+            "status": "active",
+            "activated_at": now,
+            "organization_id": org_id
+        }}
+    )
+    
+    # Create default owner roles for the organization
+    default_roles = [
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "IT", "emails": []},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "HR", "emails": []},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Office", "emails": []},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Manager", "emails": []},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Security", "emails": []},
+    ]
+    await db.owner_roles.insert_many(default_roles)
+    
+    logger.info(f"New organization registered: {data.name} (ID: {org_id})")
+    
+    # Generate token
+    token = create_access_token({"sub": user_id})
+    user_response = UserResponse(
+        id=user_id,
+        email=data.admin_email,
+        name=data.admin_name,
+        role="admin",
+        organization_id=org_id,
+        organization_name=data.name,
+        is_super_admin=False,
+        created_at=now
+    )
+    
+    return TokenResponse(access_token=token, user=user_response)
+
+@api_router.get("/organizations/{org_id}", response_model=OrganizationResponse)
+async def get_organization(org_id: str, current_user: dict = Depends(get_current_user)):
+    """Get organization details"""
+    # Check permission
+    if not current_user.get("is_super_admin") and current_user.get("organization_id") != org_id:
+        raise HTTPException(status_code=403, detail="Keine Berechtigung")
+    
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organisation nicht gefunden")
+    
+    # Count users
+    user_count = await db.users.count_documents({"organization_id": org_id})
+    org["user_count"] = user_count
+    
+    return OrganizationResponse(**org)
+
 # ============ AUTH ROUTES ============
 
 @api_router.post("/auth/register", response_model=TokenResponse)
-async def register(user_data: UserCreate):
+async def register(user_data: UserCreate, current_user: dict = Depends(require_admin)):
+    """Register a new user within an organization - Admin only"""
+    # Check user limit
+    org = await db.organizations.find_one({"id": current_user["organization_id"]}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=400, detail="Organisation nicht gefunden")
+    
+    user_count = await db.users.count_documents({"organization_id": current_user["organization_id"]})
+    if user_count >= org["user_limit"]:
+        raise HTTPException(status_code=400, detail=f"Benutzer-Limit erreicht ({org['user_limit']})")
+    
     existing = await db.users.find_one({"email": user_data.email})
     if existing:
         raise HTTPException(status_code=400, detail="E-Mail bereits registriert")
