@@ -862,7 +862,8 @@ async def delete_template(template_id: str, admin: dict = Depends(require_admin)
 
 @api_router.post("/templates/{template_id}/duplicate", response_model=TemplateResponse)
 async def duplicate_template(template_id: str, admin: dict = Depends(require_admin)):
-    original = await db.templates.find_one({"id": template_id}, {"_id": 0})
+    query = {"id": template_id, **get_org_filter(admin)}
+    original = await db.templates.find_one(query, {"_id": 0})
     if not original:
         raise HTTPException(status_code=404, detail="Template nicht gefunden")
     
@@ -870,9 +871,14 @@ async def duplicate_template(template_id: str, admin: dict = Depends(require_adm
     now = datetime.now(timezone.utc).isoformat()
     tasks = [{"id": str(uuid.uuid4()), **{k: v for k, v in t.items() if k != "id"}} for t in original["tasks"]]
     doc = {
-        "id": new_id, "name": f"{original['name']} (Kopie)", "description": original["description"],
+        "id": new_id,
+        "name": f"{original['name']} (Kopie)",
+        "description": original["description"],
         "template_type": original.get("template_type", "onboarding"),
-        "tasks": tasks, "created_at": now, "updated_at": now
+        "organization_id": admin["organization_id"],
+        "tasks": tasks,
+        "created_at": now,
+        "updated_at": now
     }
     await db.templates.insert_one(doc)
     return TemplateResponse(**doc)
