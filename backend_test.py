@@ -26,6 +26,8 @@ class OnboardingAutomatTester:
         self.offboarding_case_id = None
         self.evidence_task_id = None
         self.evidence_id = None
+        self.rolechange_template_id = None
+        self.rolechange_case_id = None
 
     def log(self, message):
         print(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
