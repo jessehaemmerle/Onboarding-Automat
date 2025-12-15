@@ -798,7 +798,7 @@ async def delete_owner_role(role_id: str, admin: dict = Depends(require_admin)):
 
 @api_router.get("/templates", response_model=List[TemplateResponse])
 async def get_templates(template_type: Optional[str] = None, current_user: dict = Depends(get_current_user)):
-    query = {}
+    query = get_org_filter(current_user)
     if template_type:
         query["template_type"] = template_type
     templates = await db.templates.find(query, {"_id": 0}).to_list(100)
@@ -810,7 +810,8 @@ async def get_templates(template_type: Optional[str] = None, current_user: dict 
 
 @api_router.get("/templates/{template_id}", response_model=TemplateResponse)
 async def get_template(template_id: str, current_user: dict = Depends(get_current_user)):
-    template = await db.templates.find_one({"id": template_id}, {"_id": 0})
+    query = {"id": template_id, **get_org_filter(current_user)}
+    template = await db.templates.find_one(query, {"_id": 0})
     if not template:
         raise HTTPException(status_code=404, detail="Template nicht gefunden")
     if "template_type" not in template:
@@ -823,9 +824,14 @@ async def create_template(data: TemplateCreate, admin: dict = Depends(require_ad
     now = datetime.now(timezone.utc).isoformat()
     tasks = [{"id": str(uuid.uuid4()), **t.model_dump()} for t in data.tasks]
     doc = {
-        "id": template_id, "name": data.name, "description": data.description,
+        "id": template_id,
+        "name": data.name,
+        "description": data.description,
         "template_type": data.template_type,
-        "tasks": tasks, "created_at": now, "updated_at": now
+        "organization_id": admin["organization_id"],
+        "tasks": tasks,
+        "created_at": now,
+        "updated_at": now
     }
     await db.templates.insert_one(doc)
     return TemplateResponse(**doc)
@@ -834,18 +840,24 @@ async def create_template(data: TemplateCreate, admin: dict = Depends(require_ad
 async def update_template(template_id: str, data: TemplateCreate, admin: dict = Depends(require_admin)):
     now = datetime.now(timezone.utc).isoformat()
     tasks = [{"id": str(uuid.uuid4()), **t.model_dump()} for t in data.tasks]
+    query = {"id": template_id, **get_org_filter(admin)}
     await db.templates.update_one(
-        {"id": template_id},
+        query,
         {"$set": {"name": data.name, "description": data.description, "template_type": data.template_type, "tasks": tasks, "updated_at": now}}
     )
-    updated = await db.templates.find_one({"id": template_id}, {"_id": 0})
+    updated = await db.templates.find_one(query, {"_id": 0})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Template nicht gefunden")
     if "template_type" not in updated:
         updated["template_type"] = "onboarding"
     return TemplateResponse(**updated)
 
 @api_router.delete("/templates/{template_id}")
 async def delete_template(template_id: str, admin: dict = Depends(require_admin)):
-    await db.templates.delete_one({"id": template_id})
+    query = {"id": template_id, **get_org_filter(admin)}
+    result = await db.templates.delete_one(query)
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Template nicht gefunden")
     return {"message": "Gelöscht"}
 
 @api_router.post("/templates/{template_id}/duplicate", response_model=TemplateResponse)
