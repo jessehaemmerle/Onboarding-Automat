@@ -135,6 +135,8 @@ class TaskResponse(BaseModel):
     offset_days: int
     due_date: str
     status: str
+    evidence_required: bool = False
+    evidence_uploaded: bool = False
     completed_at: Optional[str] = None
     completed_by: Optional[str] = None
     created_at: str
