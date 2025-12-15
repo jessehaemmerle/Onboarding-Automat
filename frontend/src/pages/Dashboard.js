@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { AlertTriangle, Clock, Users, CheckCircle2, ArrowRight, Calendar } from "lucide-react";
+import { AlertTriangle, Clock, Users, CheckCircle2, ArrowRight, Calendar, UserMinus } from "lucide-react";
 import { format, parseISO, isPast, isWithinInterval, addDays } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -18,12 +18,14 @@ const KPICard = ({ title, value, icon: Icon, variant = "default", onClick }) => 
     warning: "bg-amber-50 border-amber-200",
     danger: "bg-rose-50 border-rose-200",
     success: "bg-emerald-50 border-emerald-200",
+    purple: "bg-purple-50 border-purple-200",
   };
   const iconVariants = {
     default: "text-slate-600",
     warning: "text-amber-600",
     danger: "text-rose-600",
     success: "text-emerald-600",
+    purple: "text-purple-600",
   };
   
   return (
