@@ -87,6 +87,11 @@ export default function Layout() {
                 <p className="text-xs text-blue-600 capitalize mt-1">{user?.role}</p>
               </div>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/privacy")} className="cursor-pointer" data-testid="privacy-center-btn">
+                <Shield className="w-4 h-4 mr-2" />
+                Datenschutz
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer" data-testid="logout-btn">
                 <LogOut className="w-4 h-4 mr-2" />
                 Abmelden
