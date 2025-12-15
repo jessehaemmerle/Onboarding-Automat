@@ -85,7 +85,7 @@ export default function NewRoleChange() {
         due_date: dueDate,
         warning: t.offset_days < 0 && dueDate < new Date(),
       };
-    }).sort((a, b) => a.offset_days - b.offset_offset);
+    }).sort((a, b) => a.offset_days - b.offset_days);
 
     setPreview(tasks);
     setStep(2);
