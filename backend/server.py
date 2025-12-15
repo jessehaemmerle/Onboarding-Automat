@@ -82,7 +82,7 @@ class OwnerRoleResponse(OwnerRoleBase):
 class TemplateTaskBase(BaseModel):
     title: str
     description: str = ""
-    category: str  # IT, Admin, Manager
+    category: str  # IT, Admin, Manager, Security
     owner_role: str
     offset_days: int = 0
     evidence_required: bool = False
@@ -91,6 +91,7 @@ class TemplateTaskBase(BaseModel):
 class TemplateBase(BaseModel):
     name: str
     description: str = ""
+    template_type: str = "onboarding"  # onboarding or offboarding
 
 class TemplateCreate(TemplateBase):
     tasks: List[TemplateTaskBase] = []
@@ -103,6 +104,17 @@ class TemplateResponse(TemplateBase):
     tasks: List[TemplateTaskResponse]
     created_at: str
     updated_at: str
+
+# Evidence Models
+class EvidenceResponse(BaseModel):
+    id: str
+    task_id: str
+    filename: str
+    file_type: str
+    file_size: int
+    uploaded_by: str
+    uploaded_by_name: str
+    uploaded_at: str
 
 class OnboardingCaseCreate(BaseModel):
     employee_name: str
