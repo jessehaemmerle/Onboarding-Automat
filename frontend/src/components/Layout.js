@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { LayoutDashboard, Users, FolderKanban, Settings, LogOut, Plus, FileText, ScrollText, Shield, UserMinus, RefreshCw, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Users, FolderKanban, Settings, LogOut, Plus, FileText, ScrollText, Shield, UserMinus, RefreshCw, ChevronDown, Key } from "lucide-react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "./ui/dropdown-menu";
