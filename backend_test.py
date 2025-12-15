@@ -809,6 +809,8 @@ class OnboardingAutomatTester:
             self.test_dashboard_with_offboarding,
             self.test_settings,
             self.test_users,
+            self.test_audit_logs,
+            self.test_gdpr_endpoints,
             self.test_pdf_report
         ]
         
