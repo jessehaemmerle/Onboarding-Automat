@@ -7,6 +7,7 @@ import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
 import NewOnboarding from "./pages/NewOnboarding";
 import NewOffboarding from "./pages/NewOffboarding";
+import NewRoleChange from "./pages/NewRoleChange";
 import Templates from "./pages/Templates";
 import TemplateEditor from "./pages/TemplateEditor";
 import Settings from "./pages/Settings";
@@ -33,6 +34,7 @@ function App() {
             <Route path="cases/:id" element={<CaseDetail />} />
             <Route path="new-onboarding" element={<NewOnboarding />} />
             <Route path="new-offboarding" element={<NewOffboarding />} />
+            <Route path="new-rolechange" element={<NewRoleChange />} />
             <Route path="templates" element={<Templates />} />
             <Route path="templates/:id" element={<TemplateEditor />} />
             <Route path="templates/new" element={<TemplateEditor />} />
