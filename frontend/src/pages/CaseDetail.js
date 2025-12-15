@@ -419,7 +419,7 @@ export default function CaseDetail() {
 
       {/* Task Detail Modal */}
       <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               {selectedTask?.status === "done" ? (
@@ -454,10 +454,77 @@ export default function CaseDetail() {
                 </div>
               </div>
 
+              {/* Evidence Upload Section */}
+              {selectedTask.evidence_required && (
+                <div className="border rounded-lg p-4 bg-slate-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                      <Paperclip className="w-4 h-4" />
+                      Nachweise ({evidence.length})
+                      {selectedTask.evidence_required && <Badge variant="outline" className="text-xs">Erforderlich</Badge>}
+                    </p>
+                    <div>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={uploadEvidence}
+                        className="hidden"
+                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                        data-testid="evidence-file-input"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        data-testid="upload-evidence-btn"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        {uploading ? "Lädt..." : "Hochladen"}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {evidence.length > 0 ? (
+                    <div className="space-y-2">
+                      {evidence.map(ev => (
+                        <div key={ev.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                          <div className="flex items-center gap-3">
+                            {ev.file_type.startsWith("image/") ? (
+                              <Image className="w-5 h-5 text-blue-500" />
+                            ) : (
+                              <File className="w-5 h-5 text-slate-500" />
+                            )}
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">{ev.filename}</p>
+                              <p className="text-xs text-slate-500">
+                                {(ev.file_size / 1024).toFixed(1)} KB • {ev.uploaded_by_name} • {format(parseISO(ev.uploaded_at), "dd.MM.yy HH:mm")}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => downloadEvidence(ev)} data-testid={`download-evidence-${ev.id}`}>
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            {(ev.uploaded_by === user?.email || isAdmin) && (
+                              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => deleteEvidence(ev)} data-testid={`delete-evidence-${ev.id}`}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400 text-center py-4">Noch keine Nachweise hochgeladen</p>
+                  )}
+                </div>
+              )}
+
               {/* Comments */}
               <div>
                 <p className="text-sm font-medium text-slate-700 mb-3">Kommentare ({comments.length})</p>
-                <div className="space-y-3 max-h-60 overflow-y-auto">
+                <div className="space-y-3 max-h-40 overflow-y-auto">
                   {comments.map(c => (
                     <div key={c.id} className="bg-slate-50 rounded-lg p-3">
                       <div className="flex items-center justify-between mb-1">
@@ -493,7 +560,7 @@ export default function CaseDetail() {
       <Dialog open={showReschedule} onOpenChange={setShowReschedule}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Startdatum verschieben</DialogTitle>
+            <DialogTitle>{isOffboarding ? "Austrittsdatum" : "Startdatum"} verschieben</DialogTitle>
             <DialogDescription>
               Alle offenen Tasks werden neu terminiert.
             </DialogDescription>
