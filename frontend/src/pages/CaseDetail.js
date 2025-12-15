@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Calendar } from "../components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
-import { ArrowLeft, Calendar as CalendarIcon, Download, CheckCircle2, Circle, MessageSquare, Send, Clock, User, Mail, MapPin, FileText } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Download, CheckCircle2, Circle, MessageSquare, Send, Clock, User, Mail, MapPin, FileText, Paperclip, Upload, Trash2, File, Image, UserMinus } from "lucide-react";
 import { format, parseISO, isPast, isWithinInterval, addDays } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -29,9 +29,12 @@ export default function CaseDetail() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedTask, setSelectedTask] = useState(null);
   const [comments, setComments] = useState([]);
+  const [evidence, setEvidence] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [showReschedule, setShowReschedule] = useState(false);
   const [newStartDate, setNewStartDate] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchCase();
