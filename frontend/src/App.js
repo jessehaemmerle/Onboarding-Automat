@@ -10,6 +10,8 @@ import NewOffboarding from "./pages/NewOffboarding";
 import Templates from "./pages/Templates";
 import TemplateEditor from "./pages/TemplateEditor";
 import Settings from "./pages/Settings";
+import AuditLog from "./pages/AuditLog";
+import PrivacyCenter from "./pages/PrivacyCenter";
 import Layout from "./components/Layout";
 
 const ProtectedRoute = ({ children }) => {
@@ -35,6 +37,8 @@ function App() {
             <Route path="templates/:id" element={<TemplateEditor />} />
             <Route path="templates/new" element={<TemplateEditor />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="audit-log" element={<AuditLog />} />
+            <Route path="privacy" element={<PrivacyCenter />} />
           </Route>
         </Routes>
         <Toaster position="top-right" richColors />
