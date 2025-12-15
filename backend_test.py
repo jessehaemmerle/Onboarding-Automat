@@ -91,7 +91,7 @@ class OnboardingAutomatTester:
             "POST",
             "auth/login",
             200,
-            data={"email": "admin@test.de", "password": "test123"}
+            data={"email": "admin@startmate.de", "password": "adminpassword"}
         )
         
         if success and 'access_token' in response:
