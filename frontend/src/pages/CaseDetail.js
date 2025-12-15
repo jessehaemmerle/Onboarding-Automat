@@ -64,9 +64,18 @@ export default function CaseDetail() {
     }
   };
 
+  const fetchEvidence = async (taskId) => {
+    try {
+      const res = await axios.get(`${API}/tasks/${taskId}/evidence`);
+      setEvidence(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const openTaskModal = async (task) => {
     setSelectedTask(task);
-    await fetchComments(task.id);
+    await Promise.all([fetchComments(task.id), fetchEvidence(task.id)]);
   };
 
   const toggleTaskStatus = async (task) => {
@@ -76,10 +85,65 @@ export default function CaseDetail() {
       toast.success(newStatus === "done" ? "Task erledigt!" : "Task wieder geöffnet");
       fetchCase();
       if (selectedTask?.id === task.id) {
-        setSelectedTask({ ...selectedTask, status: newStatus });
+        setSelectedTask({ ...selectedTask, status: newStatus, evidence_uploaded: evidence.length > 0 });
       }
     } catch (err) {
-      toast.error("Fehler beim Aktualisieren");
+      toast.error(err.response?.data?.detail || "Fehler beim Aktualisieren");
+    }
+  };
+
+  const uploadEvidence = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedTask) return;
+    
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Datei zu groß (max 10MB)");
+      return;
+    }
+    
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    try {
+      await axios.post(`${API}/tasks/${selectedTask.id}/evidence`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      toast.success("Nachweis hochgeladen");
+      fetchEvidence(selectedTask.id);
+      fetchCase();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Fehler beim Hochladen");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const downloadEvidence = async (ev) => {
+    try {
+      const res = await axios.get(`${API}/evidence/${ev.id}/download`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", ev.filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      toast.error("Fehler beim Download");
+    }
+  };
+
+  const deleteEvidence = async (ev) => {
+    if (!window.confirm("Nachweis wirklich löschen?")) return;
+    try {
+      await axios.delete(`${API}/evidence/${ev.id}`);
+      toast.success("Nachweis gelöscht");
+      fetchEvidence(selectedTask.id);
+      fetchCase();
+    } catch (err) {
+      toast.error("Fehler beim Löschen");
     }
   };
 
@@ -99,7 +163,7 @@ export default function CaseDetail() {
     if (!newStartDate) return;
     try {
       await axios.patch(`${API}/cases/${id}/reschedule`, { new_start_date: newStartDate.toISOString() });
-      toast.success("Startdatum aktualisiert");
+      toast.success("Datum aktualisiert");
       setShowReschedule(false);
       fetchCase();
     } catch (err) {
