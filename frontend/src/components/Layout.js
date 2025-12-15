@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { LayoutDashboard, Users, FolderKanban, Settings, LogOut, Plus, FileText, ScrollText, Shield } from "lucide-react";
+import { LayoutDashboard, Users, FolderKanban, Settings, LogOut, Plus, FileText, ScrollText, Shield, UserMinus, RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "./ui/dropdown-menu";
@@ -54,15 +54,45 @@ export default function Layout() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-100">
-          <Button
-            onClick={() => navigate("/new-onboarding")}
-            className="w-full btn-primary gap-2"
-            data-testid="new-onboarding-btn"
-          >
-            <Plus className="w-4 h-4" />
-            Neues Onboarding
-          </Button>
+        <div className="p-4 border-t border-slate-100 space-y-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                className="w-full btn-primary gap-2"
+                data-testid="new-case-dropdown"
+              >
+                <Plus className="w-4 h-4" />
+                Neuer Vorgang
+                <ChevronDown className="w-4 h-4 ml-auto" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="w-56">
+              <DropdownMenuItem 
+                onClick={() => navigate("/new-onboarding")} 
+                className="cursor-pointer"
+                data-testid="new-onboarding-btn"
+              >
+                <Users className="w-4 h-4 mr-2 text-blue-600" />
+                Onboarding
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => navigate("/new-offboarding")} 
+                className="cursor-pointer"
+                data-testid="new-offboarding-btn"
+              >
+                <UserMinus className="w-4 h-4 mr-2 text-purple-600" />
+                Offboarding
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => navigate("/new-rolechange")} 
+                className="cursor-pointer"
+                data-testid="new-rolechange-btn"
+              >
+                <RefreshCw className="w-4 h-4 mr-2 text-orange-600" />
+                Rollenwechsel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
 
