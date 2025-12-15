@@ -547,12 +547,24 @@ async def update_case_status(case_id: str, status: str, current_user: dict = Dep
 @api_router.get("/tasks/my-tasks", response_model=List[TaskResponse])
 async def get_my_tasks(current_user: dict = Depends(get_current_user)):
     tasks = await db.tasks.find({"owner_email": current_user["email"]}, {"_id": 0}).to_list(1000)
+    for t in tasks:
+        if "evidence_required" not in t:
+            t["evidence_required"] = False
+        evidence_count = await db.evidence.count_documents({"task_id": t["id"]})
+        t["evidence_uploaded"] = evidence_count > 0
     return [TaskResponse(**t) for t in tasks]
 
 @api_router.patch("/tasks/{task_id}/status")
 async def update_task_status(task_id: str, status: str, current_user: dict = Depends(get_current_user)):
     if status not in ["open", "done"]:
         raise HTTPException(status_code=400, detail="Ungültiger Status")
+    
+    # Check if evidence is required and uploaded
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if task and task.get("evidence_required") and status == "done":
+        evidence_count = await db.evidence.count_documents({"task_id": task_id})
+        if evidence_count == 0:
+            raise HTTPException(status_code=400, detail="Nachweis erforderlich bevor der Task abgeschlossen werden kann")
     
     update_data = {"status": status}
     if status == "done":
@@ -564,6 +576,81 @@ async def update_task_status(task_id: str, status: str, current_user: dict = Dep
     
     await db.tasks.update_one({"id": task_id}, {"$set": update_data})
     return {"message": "Task-Status aktualisiert"}
+
+# ============ EVIDENCE UPLOAD ROUTES ============
+
+@api_router.get("/tasks/{task_id}/evidence", response_model=List[EvidenceResponse])
+async def get_task_evidence(task_id: str, current_user: dict = Depends(get_current_user)):
+    evidence_list = await db.evidence.find({"task_id": task_id}, {"_id": 0, "file_data": 0}).to_list(50)
+    return [EvidenceResponse(**e) for e in evidence_list]
+
+@api_router.post("/tasks/{task_id}/evidence", response_model=EvidenceResponse)
+async def upload_evidence(task_id: str, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    # Validate task exists
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task nicht gefunden")
+    
+    # Read file content
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="Datei zu groß (max 10MB)")
+    
+    # Determine file type
+    file_type = file.content_type or "application/octet-stream"
+    
+    evidence_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    evidence_doc = {
+        "id": evidence_id,
+        "task_id": task_id,
+        "filename": file.filename,
+        "file_type": file_type,
+        "file_size": len(content),
+        "file_data": base64.b64encode(content).decode("utf-8"),
+        "uploaded_by": current_user["email"],
+        "uploaded_by_name": current_user["name"],
+        "uploaded_at": now
+    }
+    await db.evidence.insert_one(evidence_doc)
+    
+    return EvidenceResponse(
+        id=evidence_id,
+        task_id=task_id,
+        filename=file.filename,
+        file_type=file_type,
+        file_size=len(content),
+        uploaded_by=current_user["email"],
+        uploaded_by_name=current_user["name"],
+        uploaded_at=now
+    )
+
+@api_router.get("/evidence/{evidence_id}/download")
+async def download_evidence(evidence_id: str, current_user: dict = Depends(get_current_user)):
+    evidence = await db.evidence.find_one({"id": evidence_id}, {"_id": 0})
+    if not evidence:
+        raise HTTPException(status_code=404, detail="Nachweis nicht gefunden")
+    
+    file_data = base64.b64decode(evidence["file_data"])
+    return StreamingResponse(
+        io.BytesIO(file_data),
+        media_type=evidence["file_type"],
+        headers={"Content-Disposition": f"attachment; filename=\"{evidence['filename']}\""}
+    )
+
+@api_router.delete("/evidence/{evidence_id}")
+async def delete_evidence(evidence_id: str, current_user: dict = Depends(get_current_user)):
+    evidence = await db.evidence.find_one({"id": evidence_id}, {"_id": 0})
+    if not evidence:
+        raise HTTPException(status_code=404, detail="Nachweis nicht gefunden")
+    
+    # Only allow uploader or admin to delete
+    if evidence["uploaded_by"] != current_user["email"] and current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Keine Berechtigung")
+    
+    await db.evidence.delete_one({"id": evidence_id})
+    return {"message": "Nachweis gelöscht"}
 
 @api_router.get("/tasks/{task_id}/comments", response_model=List[TaskCommentResponse])
 async def get_task_comments(task_id: str, current_user: dict = Depends(get_current_user)):
