@@ -6,14 +6,12 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Users, ArrowRight, Loader2 } from "lucide-react";
+import { Users, ArrowRight, Loader2, Building2 } from "lucide-react";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
-  const [registerData, setRegisterData] = useState({ name: "", email: "", password: "" });
-  const { login, register } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -25,20 +23,6 @@ export default function Login() {
       navigate("/");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Login fehlgeschlagen");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      await register(registerData.name, registerData.email, registerData.password);
-      toast.success("Konto erstellt! Willkommen!");
-      navigate("/");
-    } catch (err) {
-      toast.error(err.response?.data?.detail || "Registrierung fehlgeschlagen");
     } finally {
       setIsLoading(false);
     }
@@ -57,119 +41,67 @@ export default function Login() {
             <p className="text-slate-500 mt-2">Onboarding standardisieren, Zeit sparen.</p>
           </div>
 
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login" data-testid="login-tab">Anmelden</TabsTrigger>
-              <TabsTrigger value="register" data-testid="register-tab">Registrieren</TabsTrigger>
-            </TabsList>
+          <Card className="border-0 shadow-none">
+            <CardHeader className="px-0">
+              <CardTitle className="text-xl">Anmelden</CardTitle>
+              <CardDescription>Melden Sie sich mit Ihren Zugangsdaten an.</CardDescription>
+            </CardHeader>
+            <CardContent className="px-0 space-y-6">
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-email">E-Mail</Label>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    placeholder="name@firma.de"
+                    value={loginData.email}
+                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                    required
+                    data-testid="login-email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="login-password">Passwort</Label>
+                  <Input
+                    id="login-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={loginData.password}
+                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                    required
+                    data-testid="login-password"
+                  />
+                </div>
+                <Button type="submit" className="w-full h-12 text-lg" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Anmeldung läuft...
+                    </>
+                  ) : (
+                    <>Anmelden <ArrowRight className="w-5 h-5 ml-2" /></>
+                  )}
+                </Button>
+              </form>
 
-            <TabsContent value="login">
-              <Card className="border-0 shadow-none">
-                <CardHeader className="px-0">
-                  <CardTitle className="text-xl">Anmelden</CardTitle>
-                  <CardDescription>Melden Sie sich mit Ihren Zugangsdaten an.</CardDescription>
-                </CardHeader>
-                <CardContent className="px-0">
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="login-email">E-Mail</Label>
-                      <Input
-                        id="login-email"
-                        type="email"
-                        placeholder="name@firma.de"
-                        value={loginData.email}
-                        onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                        required
-                        data-testid="login-email"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="login-password">Passwort</Label>
-                      <Input
-                        id="login-password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={loginData.password}
-                        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                        required
-                        data-testid="login-password"
-                      />
-                    </div>
-                    <Button type="submit" className="w-full btn-primary" disabled={isLoading} data-testid="login-submit">
-                      {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Anmelden <ArrowRight className="w-4 h-4 ml-2" /></>}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="register">
-              <Card className="border-0 shadow-none">
-                <CardHeader className="px-0">
-                  <CardTitle className="text-xl">Konto erstellen</CardTitle>
-                  <CardDescription>Der erste Benutzer wird automatisch Administrator.</CardDescription>
-                </CardHeader>
-                <CardContent className="px-0">
-                  <form onSubmit={handleRegister} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="register-name">Name</Label>
-                      <Input
-                        id="register-name"
-                        type="text"
-                        placeholder="Max Mustermann"
-                        value={registerData.name}
-                        onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
-                        required
-                        data-testid="register-name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="register-email">E-Mail</Label>
-                      <Input
-                        id="register-email"
-                        type="email"
-                        placeholder="name@firma.de"
-                        value={registerData.email}
-                        onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                        required
-                        data-testid="register-email"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="register-password">Passwort</Label>
-                      <Input
-                        id="register-password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={registerData.password}
-                        onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                        required
-                        data-testid="register-password"
-                      />
-                    </div>
-                    <Button type="submit" className="w-full btn-primary" disabled={isLoading} data-testid="register-submit">
-                      {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Registrieren <ArrowRight className="w-4 h-4 ml-2" /></>}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-
-          {/* Organization Registration Link */}
-          <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 text-center">
-            <p className="text-sm text-slate-600 mb-2">
-              Neue Firma mit Lizenzschlüssel?
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate("/register-organization")}
-              className="w-full"
-            >
-              Firma registrieren
-            </Button>
-          </div>
+              {/* Organization Registration Link */}
+              <div className="pt-4 border-t border-slate-200">
+                <div className="text-center mb-3">
+                  <p className="text-sm text-slate-600 mb-1">Noch keine Firma registriert?</p>
+                  <p className="text-xs text-slate-500">Registrierung nur mit gültigem Lizenzschlüssel</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate("/register-organization")}
+                  className="w-full gap-2"
+                >
+                  <Building2 className="w-4 h-4" />
+                  Firma registrieren
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
