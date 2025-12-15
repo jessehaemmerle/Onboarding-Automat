@@ -120,9 +120,11 @@ class OnboardingCaseCreate(BaseModel):
     employee_name: str
     employee_email: EmailStr
     template_id: str
-    start_date: str
+    start_date: str  # For offboarding this is exit_date
     location: str = ""
     manager_email: EmailStr
+    case_type: str = "onboarding"  # onboarding or offboarding
+    linked_case_id: Optional[str] = None  # Link offboarding to existing onboarding case
 
 class TaskResponse(BaseModel):
     id: str
