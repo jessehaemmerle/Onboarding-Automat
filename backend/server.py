@@ -34,6 +34,9 @@ SECRET_KEY = os.environ.get('JWT_SECRET', 'onboarding-automat-secret-key-change-
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
 
+# Master Admin Key for license generation
+MASTER_ADMIN_KEY = os.environ.get('MASTER_ADMIN_KEY', 'change-this-master-key-in-production')
+
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
