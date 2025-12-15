@@ -761,25 +761,37 @@ async def update_user(user_id: str, role: str, admin: dict = Depends(require_adm
 
 @api_router.get("/owner-roles", response_model=List[OwnerRoleResponse])
 async def get_owner_roles(current_user: dict = Depends(get_current_user)):
-    roles = await db.owner_roles.find({}, {"_id": 0}).to_list(100)
+    query = get_org_filter(current_user)
+    roles = await db.owner_roles.find(query, {"_id": 0}).to_list(100)
     return [OwnerRoleResponse(**r) for r in roles]
 
 @api_router.post("/owner-roles", response_model=OwnerRoleResponse)
 async def create_owner_role(data: OwnerRoleCreate, admin: dict = Depends(require_admin)):
     role_id = str(uuid.uuid4())
-    doc = {"id": role_id, "name": data.name, "emails": data.emails}
+    doc = {
+        "id": role_id,
+        "name": data.name,
+        "emails": data.emails,
+        "organization_id": admin["organization_id"]
+    }
     await db.owner_roles.insert_one(doc)
     return OwnerRoleResponse(**doc)
 
 @api_router.put("/owner-roles/{role_id}", response_model=OwnerRoleResponse)
 async def update_owner_role(role_id: str, data: OwnerRoleCreate, admin: dict = Depends(require_admin)):
-    await db.owner_roles.update_one({"id": role_id}, {"$set": {"name": data.name, "emails": data.emails}})
-    updated = await db.owner_roles.find_one({"id": role_id}, {"_id": 0})
+    query = {"id": role_id, **get_org_filter(admin)}
+    await db.owner_roles.update_one(query, {"$set": {"name": data.name, "emails": data.emails}})
+    updated = await db.owner_roles.find_one(query, {"_id": 0})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Rolle nicht gefunden")
     return OwnerRoleResponse(**updated)
 
 @api_router.delete("/owner-roles/{role_id}")
 async def delete_owner_role(role_id: str, admin: dict = Depends(require_admin)):
-    await db.owner_roles.delete_one({"id": role_id})
+    query = {"id": role_id, **get_org_filter(admin)}
+    result = await db.owner_roles.delete_one(query)
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Rolle nicht gefunden")
     return {"message": "Gelöscht"}
 
 # ============ TEMPLATES ROUTES ============
