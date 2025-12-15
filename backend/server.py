@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Form, BackgroundTasks
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Form, BackgroundTasks, Header
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
@@ -480,10 +480,12 @@ def get_org_filter(current_user: dict) -> dict:
 @api_router.post("/admin/generate-license-keys", response_model=List[LicenseKeyResponse])
 async def generate_license_keys(
     data: LicenseKeyCreate,
-    master_key: str = Depends(lambda req: req.headers.get("X-Master-Key"))
+    x_master_key: str = Header(None, alias="X-Master-Key")
 ):
     """Generate new license keys - requires Master Admin Key"""
-    verify_master_key(master_key)
+    if not x_master_key:
+        raise HTTPException(status_code=403, detail="Master-Admin-Key fehlt")
+    verify_master_key(x_master_key)
     
     now = datetime.now(timezone.utc).isoformat()
     keys = []
