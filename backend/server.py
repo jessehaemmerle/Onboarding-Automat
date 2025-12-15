@@ -630,6 +630,24 @@ async def get_organization(org_id: str, current_user: dict = Depends(get_current
     
     return OrganizationResponse(**org)
 
+@api_router.get("/admin/licenses")
+async def get_all_licenses(admin: dict = Depends(require_admin)):
+    """Get all license keys - Admin only"""
+    licenses = await db.license_keys.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return licenses
+
+@api_router.get("/admin/organizations")
+async def get_all_organizations(admin: dict = Depends(require_admin)):
+    """Get all organizations with stats - Admin only"""
+    orgs = await db.organizations.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Add user count and case count for each org
+    for org in orgs:
+        org["user_count"] = await db.users.count_documents({"organization_id": org["id"]})
+        org["case_count"] = await db.cases.count_documents({"organization_id": org["id"]})
+    
+    return orgs
+
 # ============ AUTH ROUTES ============
 
 @api_router.post("/auth/register", response_model=TokenResponse)
