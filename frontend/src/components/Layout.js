@@ -107,14 +107,37 @@ export default function Layout() {
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-blue-100 text-blue-700 text-sm font-semibold">{initials}</AvatarFallback>
                 </Avatar>
-                <span className="text-sm font-medium text-slate-700">{user?.name}</span>
+                <div className="text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-slate-700">{user?.name}</span>
+                    {user?.is_super_admin && (
+                      <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs font-semibold rounded">
+                        SA
+                      </span>
+                    )}
+                  </div>
+                  {user?.organization_name && (
+                    <span className="text-xs text-slate-500">🏢 {user.organization_name}</span>
+                  )}
+                </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <div className="px-2 py-1.5">
-                <p className="text-sm font-medium">{user?.name}</p>
+            <DropdownMenuContent align="end" className="w-64">
+              <div className="px-3 py-2 border-b border-slate-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-sm font-medium text-slate-900">{user?.name}</p>
+                  {user?.is_super_admin && (
+                    <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-semibold rounded">
+                      Super Admin
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-500">{user?.email}</p>
-                <p className="text-xs text-blue-600 capitalize mt-1">{user?.role}</p>
+                {user?.organization_name && (
+                  <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                    <span>🏢</span> {user.organization_name}
+                  </p>
+                )}
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate("/privacy")} className="cursor-pointer" data-testid="privacy-center-btn">
