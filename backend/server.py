@@ -185,9 +185,86 @@ class OrgSettingsBase(BaseModel):
     org_timezone: str = "Europe/Berlin"
     reminder_days_before: int = 3
     reminder_days_after: int = 2
+    data_retention_days: int = 365 * 3  # 3 Jahre Standard
+    privacy_policy_url: str = ""
+    dpo_email: str = ""  # Datenschutzbeauftragter
 
 class OrgSettingsResponse(OrgSettingsBase):
     id: str
+
+# ============ AUDIT LOG MODELS ============
+
+class AuditLogEntry(BaseModel):
+    id: str
+    timestamp: str
+    user_id: str
+    user_email: str
+    user_name: str
+    action: str  # create, update, delete, access, export, login, logout
+    resource_type: str  # user, case, task, template, evidence, settings
+    resource_id: Optional[str] = None
+    resource_name: Optional[str] = None
+    details: Optional[str] = None
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    ip_address: Optional[str] = None
+
+class AuditLogResponse(BaseModel):
+    entries: List[AuditLogEntry]
+    total: int
+    page: int
+    page_size: int
+
+# ============ DSGVO/GDPR MODELS ============
+
+class ConsentRecord(BaseModel):
+    id: str
+    user_id: str
+    consent_type: str  # privacy_policy, data_processing, marketing
+    consented: bool
+    consented_at: str
+    ip_address: Optional[str] = None
+    revoked_at: Optional[str] = None
+
+class DataExportRequest(BaseModel):
+    format: str = "json"  # json or csv
+
+class DataDeletionRequest(BaseModel):
+    confirm: bool
+    reason: Optional[str] = None
+
+# ============ AUDIT LOG HELPER ============
+
+async def log_audit(
+    user: dict,
+    action: str,
+    resource_type: str,
+    resource_id: str = None,
+    resource_name: str = None,
+    details: str = None,
+    old_value: str = None,
+    new_value: str = None,
+    ip_address: str = None
+):
+    """Log an audit entry for DSGVO compliance"""
+    audit_entry = {
+        "id": str(uuid.uuid4()),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "user_id": user.get("id", "system"),
+        "user_email": user.get("email", "system"),
+        "user_name": user.get("name", "System"),
+        "action": action,
+        "resource_type": resource_type,
+        "resource_id": resource_id,
+        "resource_name": resource_name,
+        "details": details,
+        "old_value": old_value,
+        "new_value": new_value,
+        "ip_address": ip_address
+    }
+    await db.audit_logs.insert_one(audit_entry)
+    logger.info(f"AUDIT: {user.get('email', 'system')} - {action} - {resource_type} - {resource_id}")
+    return audit_entry
 
 # ============ AUTH HELPERS ============
 
