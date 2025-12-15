@@ -372,12 +372,13 @@ async def duplicate_template(template_id: str, admin: dict = Depends(require_adm
     tasks = [{"id": str(uuid.uuid4()), **{k: v for k, v in t.items() if k != "id"}} for t in original["tasks"]]
     doc = {
         "id": new_id, "name": f"{original['name']} (Kopie)", "description": original["description"],
+        "template_type": original.get("template_type", "onboarding"),
         "tasks": tasks, "created_at": now, "updated_at": now
     }
     await db.templates.insert_one(doc)
     return TemplateResponse(**doc)
 
-# ============ ONBOARDING CASES ROUTES ============
+# ============ ONBOARDING/OFFBOARDING CASES ROUTES ============
 
 async def resolve_owner_email(owner_role: str) -> str:
     role = await db.owner_roles.find_one({"name": owner_role}, {"_id": 0})
