@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import uuid
 
 class OnboardingAutomatTester:
-    def __init__(self, base_url="https://startmate.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://onboarding-flow-27.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.user_id = None
