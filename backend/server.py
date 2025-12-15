@@ -931,7 +931,8 @@ async def get_cases(status: Optional[str] = None, case_type: Optional[str] = Non
 
 @api_router.get("/cases/{case_id}", response_model=OnboardingCaseResponse)
 async def get_case(case_id: str, current_user: dict = Depends(get_current_user)):
-    case = await db.cases.find_one({"id": case_id}, {"_id": 0})
+    query = {"id": case_id, **get_org_filter(current_user)}
+    case = await db.cases.find_one(query, {"_id": 0})
     if not case:
         raise HTTPException(status_code=404, detail="Case nicht gefunden")
     # Backward compatibility
@@ -955,7 +956,8 @@ async def get_case(case_id: str, current_user: dict = Depends(get_current_user))
 
 @api_router.post("/cases", response_model=OnboardingCaseResponse)
 async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(get_current_user)):
-    template = await db.templates.find_one({"id": data.template_id}, {"_id": 0})
+    query = {"id": data.template_id, **get_org_filter(current_user)}
+    template = await db.templates.find_one(query, {"_id": 0})
     if not template:
         raise HTTPException(status_code=404, detail="Template nicht gefunden")
     
@@ -975,6 +977,7 @@ async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(g
         "manager_email": data.manager_email,
         "status": "active",
         "linked_case_id": data.linked_case_id,
+        "organization_id": current_user["organization_id"],
         "created_by": current_user["id"],
         "created_at": now
     }
@@ -988,7 +991,7 @@ async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(g
     
     tasks = []
     for t in template.get("tasks", []):
-        owner_email = await resolve_owner_email(t["owner_role"])
+        owner_email = await resolve_owner_email(t["owner_role"], current_user["organization_id"])
         due_date = start_date + timedelta(days=t["offset_days"])
         task_doc = {
             "id": str(uuid.uuid4()),
