@@ -1212,8 +1212,9 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     now = datetime.now(timezone.utc)
     seven_days = now + timedelta(days=7)
     
-    query = {}
-    if current_user["role"] == "owner":
+    org_filter = get_org_filter(current_user)
+    query = {**org_filter}
+    if current_user["role"] == "owner" and not current_user.get("is_super_admin"):
         query["owner_email"] = current_user["email"]
     
     all_tasks = await db.tasks.find(query, {"_id": 0}).to_list(10000)
