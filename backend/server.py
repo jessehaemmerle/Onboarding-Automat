@@ -1076,7 +1076,8 @@ async def update_case_status(case_id: str, status: str, current_user: dict = Dep
 
 @api_router.get("/tasks/my-tasks", response_model=List[TaskResponse])
 async def get_my_tasks(current_user: dict = Depends(get_current_user)):
-    tasks = await db.tasks.find({"owner_email": current_user["email"]}, {"_id": 0}).to_list(1000)
+    query = {"owner_email": current_user["email"], **get_org_filter(current_user)}
+    tasks = await db.tasks.find(query, {"_id": 0}).to_list(1000)
     for t in tasks:
         if "evidence_required" not in t:
             t["evidence_required"] = False
@@ -1090,7 +1091,8 @@ async def update_task_status(task_id: str, status: str, current_user: dict = Dep
         raise HTTPException(status_code=400, detail="Ungültiger Status")
     
     # Check if evidence is required and uploaded
-    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    query = {"id": task_id, **get_org_filter(current_user)}
+    task = await db.tasks.find_one(query, {"_id": 0})
     if task and task.get("evidence_required") and status == "done":
         evidence_count = await db.evidence.count_documents({"task_id": task_id})
         if evidence_count == 0:
