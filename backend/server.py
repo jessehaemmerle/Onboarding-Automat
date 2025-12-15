@@ -310,8 +310,15 @@ async def delete_owner_role(role_id: str, admin: dict = Depends(require_admin)):
 # ============ TEMPLATES ROUTES ============
 
 @api_router.get("/templates", response_model=List[TemplateResponse])
-async def get_templates(current_user: dict = Depends(get_current_user)):
-    templates = await db.templates.find({}, {"_id": 0}).to_list(100)
+async def get_templates(template_type: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if template_type:
+        query["template_type"] = template_type
+    templates = await db.templates.find(query, {"_id": 0}).to_list(100)
+    # Add template_type for backward compatibility
+    for t in templates:
+        if "template_type" not in t:
+            t["template_type"] = "onboarding"
     return [TemplateResponse(**t) for t in templates]
 
 @api_router.get("/templates/{template_id}", response_model=TemplateResponse)
@@ -319,6 +326,8 @@ async def get_template(template_id: str, current_user: dict = Depends(get_curren
     template = await db.templates.find_one({"id": template_id}, {"_id": 0})
     if not template:
         raise HTTPException(status_code=404, detail="Template nicht gefunden")
+    if "template_type" not in template:
+        template["template_type"] = "onboarding"
     return TemplateResponse(**template)
 
 @api_router.post("/templates", response_model=TemplateResponse)
@@ -328,6 +337,7 @@ async def create_template(data: TemplateCreate, admin: dict = Depends(require_ad
     tasks = [{"id": str(uuid.uuid4()), **t.model_dump()} for t in data.tasks]
     doc = {
         "id": template_id, "name": data.name, "description": data.description,
+        "template_type": data.template_type,
         "tasks": tasks, "created_at": now, "updated_at": now
     }
     await db.templates.insert_one(doc)
@@ -339,9 +349,11 @@ async def update_template(template_id: str, data: TemplateCreate, admin: dict = 
     tasks = [{"id": str(uuid.uuid4()), **t.model_dump()} for t in data.tasks]
     await db.templates.update_one(
         {"id": template_id},
-        {"$set": {"name": data.name, "description": data.description, "tasks": tasks, "updated_at": now}}
+        {"$set": {"name": data.name, "description": data.description, "template_type": data.template_type, "tasks": tasks, "updated_at": now}}
     )
     updated = await db.templates.find_one({"id": template_id}, {"_id": 0})
+    if "template_type" not in updated:
+        updated["template_type"] = "onboarding"
     return TemplateResponse(**updated)
 
 @api_router.delete("/templates/{template_id}")
