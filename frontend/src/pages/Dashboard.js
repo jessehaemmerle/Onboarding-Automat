@@ -50,7 +50,7 @@ const KPICard = ({ title, value, icon: Icon, variant = "default", onClick }) => 
 };
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({ overdue_tasks: 0, due_in_7_days: 0, active_cases: 0, completed_cases: 0 });
+  const [stats, setStats] = useState({ overdue_tasks: 0, due_in_7_days: 0, active_cases: 0, completed_cases: 0, active_offboardings: 0, completed_offboardings: 0 });
   const [cases, setCases] = useState([]);
   const [myTasks, setMyTasks] = useState([]);
   const [loading, setLoading] = useState(true);
