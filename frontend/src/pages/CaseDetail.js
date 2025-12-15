@@ -230,6 +230,7 @@ export default function CaseDetail() {
   const categories = [...new Set(caseData.tasks.map(t => t.category))];
   const completedCount = caseData.tasks.filter(t => t.status === "done").length;
   const progress = caseData.tasks.length > 0 ? Math.round((completedCount / caseData.tasks.length) * 100) : 0;
+  const isOffboarding = caseData.case_type === "offboarding";
 
   return (
     <div className="space-y-6" data-testid="case-detail">
@@ -240,8 +241,11 @@ export default function CaseDetail() {
             <ArrowLeft className="w-4 h-4 mr-2" /> Zurück
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{caseData.employee_name}</h1>
-            <p className="text-slate-500">{caseData.template_name_snapshot}</p>
+            <div className="flex items-center gap-3">
+              {isOffboarding && <UserMinus className="w-6 h-6 text-purple-600" />}
+              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{caseData.employee_name}</h1>
+            </div>
+            <p className="text-slate-500">{isOffboarding ? "Offboarding" : caseData.template_name_snapshot} • {caseData.template_name_snapshot}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -252,7 +256,7 @@ export default function CaseDetail() {
             <Download className="w-4 h-4 mr-2" /> Report
           </Button>
           {caseData.status === "active" ? (
-            <Button onClick={() => updateCaseStatus("completed")} className="btn-primary" data-testid="complete-btn">
+            <Button onClick={() => updateCaseStatus("completed")} className={isOffboarding ? "bg-purple-600 hover:bg-purple-700 text-white" : "btn-primary"} data-testid="complete-btn">
               <CheckCircle2 className="w-4 h-4 mr-2" /> Abschließen
             </Button>
           ) : (
@@ -267,7 +271,7 @@ export default function CaseDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
           {/* Progress */}
-          <Card>
+          <Card className={isOffboarding ? "border-l-4 border-l-purple-400" : ""}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-slate-900">Fortschritt</h3>
@@ -275,7 +279,7 @@ export default function CaseDetail() {
               </div>
               <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-500 ${progress === 100 ? 'bg-emerald-500' : 'bg-blue-600'}`}
+                  className={`h-full rounded-full transition-all duration-500 ${progress === 100 ? 'bg-emerald-500' : isOffboarding ? 'bg-purple-600' : 'bg-blue-600'}`}
                   style={{ width: `${progress}%` }}
                 />
               </div>
