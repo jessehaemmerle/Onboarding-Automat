@@ -155,6 +155,21 @@ export default function Login() {
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Organization Registration Link */}
+          <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 text-center">
+            <p className="text-sm text-slate-600 mb-2">
+              Neue Firma mit Lizenzschlüssel?
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate("/register-organization")}
+              className="w-full"
+            >
+              Firma registrieren
+            </Button>
+          </div>
         </div>
       </div>
 
