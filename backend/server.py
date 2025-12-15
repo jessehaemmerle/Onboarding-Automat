@@ -179,6 +179,8 @@ class DashboardStats(BaseModel):
     due_in_7_days: int
     active_cases: int
     completed_cases: int
+    active_offboardings: int = 0
+    completed_offboardings: int = 0
 
 class OrgSettingsBase(BaseModel):
     org_name: str = "Meine Firma"
