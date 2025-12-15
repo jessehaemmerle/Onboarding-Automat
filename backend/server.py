@@ -671,7 +671,7 @@ async def register(user_data: UserCreate, current_user: dict = Depends(require_a
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
     user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
-    if not user or not verify_password(credentials.password, user.get("password_hash", "")):
+    if not user or not verify_password(credentials.password, user.get("password_hash", user.get("hashed_password", ""))):
         # Log failed attempt (without user details for security)
         await db.audit_logs.insert_one({
             "id": str(uuid.uuid4()),
@@ -685,6 +685,12 @@ async def login(credentials: UserLogin):
         })
         raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten")
     
+    # Get organization info
+    org_name = "Unknown"
+    if user.get("organization_id"):
+        org = await db.organizations.find_one({"id": user["organization_id"]}, {"_id": 0, "name": 1})
+        org_name = org["name"] if org else "Unknown"
+    
     # Audit Log
     await log_audit(
         user=user,
@@ -696,7 +702,16 @@ async def login(credentials: UserLogin):
     token = create_access_token({"sub": user["id"]})
     return TokenResponse(
         access_token=token,
-        user=UserResponse(id=user["id"], email=user["email"], name=user["name"], role=user["role"], created_at=user["created_at"])
+        user=UserResponse(
+            id=user["id"],
+            email=user["email"],
+            name=user["name"],
+            role=user["role"],
+            organization_id=user.get("organization_id", ""),
+            organization_name=org_name,
+            is_super_admin=user.get("is_super_admin", False),
+            created_at=user["created_at"]
+        )
     )
 
 @api_router.get("/auth/me", response_model=UserResponse)
