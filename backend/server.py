@@ -996,6 +996,7 @@ async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(g
         task_doc = {
             "id": str(uuid.uuid4()),
             "case_id": case_id,
+            "organization_id": current_user["organization_id"],
             "title": t["title"],
             "description": t.get("description", ""),
             "category": t["category"],
@@ -1020,13 +1021,15 @@ async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(g
 @api_router.get("/employees/for-offboarding")
 async def get_employees_for_offboarding(current_user: dict = Depends(get_current_user)):
     # Get all onboarding cases that are completed or active (employee exists)
+    query = {"case_type": {"$in": ["onboarding", None]}, **get_org_filter(current_user)}
     cases = await db.cases.find(
-        {"case_type": {"$in": ["onboarding", None]}},
+        query,
         {"_id": 0, "id": 1, "employee_name": 1, "employee_email": 1, "location": 1, "manager_email": 1, "status": 1}
     ).to_list(1000)
     
     # Filter out employees that already have an active offboarding
-    active_offboardings = await db.cases.distinct("employee_email", {"case_type": "offboarding", "status": "active"})
+    offboarding_query = {"case_type": "offboarding", "status": "active", **get_org_filter(current_user)}
+    active_offboardings = await db.cases.distinct("employee_email", offboarding_query)
     
     employees = []
     for c in cases:
