@@ -137,14 +137,16 @@ export default function Cases() {
       {filteredCases.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <Users className="w-16 h-16 text-slate-300 mb-4" />
-            <h3 className="text-xl font-semibold text-slate-700 mb-2">Keine Onboardings gefunden</h3>
+            {caseTypeFilter === "offboarding" ? <UserMinus className="w-16 h-16 text-slate-300 mb-4" /> : <Users className="w-16 h-16 text-slate-300 mb-4" />}
+            <h3 className="text-xl font-semibold text-slate-700 mb-2">
+              {caseTypeFilter === "offboarding" ? "Keine Offboardings gefunden" : "Keine Onboardings gefunden"}
+            </h3>
             <p className="text-slate-500 mb-6">
-              {search ? "Versuchen Sie eine andere Suche" : "Starten Sie Ihr erstes Onboarding"}
+              {search ? "Versuchen Sie eine andere Suche" : caseTypeFilter === "offboarding" ? "Starten Sie ein Offboarding" : "Starten Sie Ihr erstes Onboarding"}
             </p>
             {!search && (
-              <Button onClick={() => navigate("/new-onboarding")} className="btn-primary" data-testid="start-onboarding">
-                Onboarding starten
+              <Button onClick={() => navigate(caseTypeFilter === "offboarding" ? "/new-offboarding" : "/new-onboarding")} className="btn-primary" data-testid="start-case">
+                {caseTypeFilter === "offboarding" ? "Offboarding starten" : "Onboarding starten"}
               </Button>
             )}
           </CardContent>
@@ -157,19 +159,21 @@ export default function Cases() {
             const completedTasks = totalTasks - openTasks;
             const overdueTasks = c.tasks?.filter(t => t.status === "open" && isPast(parseISO(t.due_date))).length || 0;
             const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            const hasEvidenceRequired = c.tasks?.some(t => t.evidence_required && !t.evidence_uploaded && t.status === "open");
+            const isOffboarding = c.case_type === "offboarding";
 
             return (
               <Card
                 key={c.id}
-                className="cursor-pointer card-hover"
+                className={`cursor-pointer card-hover ${isOffboarding ? 'border-l-4 border-l-purple-400' : ''}`}
                 onClick={() => navigate(`/cases/${c.id}`)}
                 data-testid={`case-card-${c.id}`}
               >
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-blue-700 font-bold">
+                      <div className={`w-12 h-12 rounded-full ${isOffboarding ? 'bg-purple-100' : 'bg-blue-100'} flex items-center justify-center`}>
+                        <span className={`${isOffboarding ? 'text-purple-700' : 'text-blue-700'} font-bold`}>
                           {c.employee_name.split(" ").map(n => n[0]).join("").toUpperCase()}
                         </span>
                       </div>
@@ -177,15 +181,19 @@ export default function Cases() {
                         <h3 className="font-semibold text-lg text-slate-900">{c.employee_name}</h3>
                         <p className="text-sm text-slate-500">{c.employee_email}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline" className="text-xs">{c.template_name_snapshot}</Badge>
+                          <Badge variant={isOffboarding ? "secondary" : "outline"} className={`text-xs ${isOffboarding ? 'bg-purple-100 text-purple-700' : ''}`}>
+                            {isOffboarding ? 'Offboarding' : c.template_name_snapshot}
+                          </Badge>
+                          {!isOffboarding && <Badge variant="outline" className="text-xs">{c.template_name_snapshot}</Badge>}
                           {c.location && <Badge variant="secondary" className="text-xs">{c.location}</Badge>}
+                          {hasEvidenceRequired && <Badge variant="outline" className="text-xs text-amber-600 border-amber-300"><Paperclip className="w-3 h-3 mr-1" />Nachweis fehlt</Badge>}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-8">
                       <div className="text-center">
-                        <p className="text-xs text-slate-500 uppercase tracking-wider">Startdatum</p>
+                        <p className="text-xs text-slate-500 uppercase tracking-wider">{isOffboarding ? "Austrittsdatum" : "Startdatum"}</p>
                         <p className="text-sm font-medium text-slate-700 flex items-center gap-1 mt-1">
                           <Calendar className="w-4 h-4" />
                           {format(parseISO(c.start_date), "dd. MMM yyyy", { locale: de })}
@@ -197,7 +205,7 @@ export default function Cases() {
                         <div className="flex items-center gap-2 mt-1">
                           <div className="w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full transition-all ${progress === 100 ? 'bg-emerald-500' : 'bg-blue-600'}`}
+                              className={`h-full rounded-full transition-all ${progress === 100 ? 'bg-emerald-500' : isOffboarding ? 'bg-purple-600' : 'bg-blue-600'}`}
                               style={{ width: `${progress}%` }}
                             />
                           </div>
