@@ -630,6 +630,163 @@ class OnboardingAutomatTester:
         
         return success
 
+    def test_audit_logs(self):
+        """Test audit log functionality (DSGVO Art. 30)"""
+        self.log("\n=== TESTING AUDIT LOGS (DSGVO Art. 30) ===")
+        
+        # Get audit logs (admin only)
+        success, response = self.run_test(
+            "Get audit logs",
+            "GET",
+            "audit-logs",
+            200
+        )
+        
+        if success and response:
+            logs = response
+            self.log(f"✅ Found {logs.get('total', 0)} audit log entries")
+            
+            # Test pagination
+            self.run_test(
+                "Get audit logs with pagination",
+                "GET",
+                "audit-logs?page=1&page_size=10",
+                200
+            )
+            
+            # Test filtering by action
+            self.run_test(
+                "Filter audit logs by action",
+                "GET",
+                "audit-logs?action=login",
+                200
+            )
+            
+            # Test filtering by resource type
+            self.run_test(
+                "Filter audit logs by resource type",
+                "GET",
+                "audit-logs?resource_type=auth",
+                200
+            )
+        
+        # Test audit log export
+        success, response = self.run_test(
+            "Export audit logs as CSV",
+            "GET",
+            "audit-logs/export",
+            200
+        )
+        
+        if success:
+            self.log("✅ Audit log CSV export successful")
+        
+        return success
+
+    def test_gdpr_endpoints(self):
+        """Test GDPR compliance endpoints"""
+        self.log("\n=== TESTING GDPR COMPLIANCE ENDPOINTS ===")
+        
+        # Test privacy info (Art. 13/14)
+        success, response = self.run_test(
+            "Get privacy information",
+            "GET",
+            "gdpr/privacy-info",
+            200
+        )
+        
+        if success and response:
+            privacy_info = response
+            self.log(f"✅ Privacy info loaded with {len(privacy_info.get('rights', []))} rights")
+        
+        # Test my data (Art. 15 - Right to access)
+        success, response = self.run_test(
+            "Get my data (Art. 15)",
+            "GET",
+            "gdpr/my-data",
+            200
+        )
+        
+        if success and response:
+            my_data = response
+            categories = my_data.get('data_categories', [])
+            self.log(f"✅ Personal data retrieved with {len(categories)} data categories")
+            
+            # Verify required data categories are present
+            expected_categories = ['Stammdaten', 'Nutzungsdaten', 'Kommunikation', 'Nachweise', 'Protokolldaten']
+            found_categories = [cat['category'] for cat in categories]
+            
+            for expected in expected_categories:
+                if expected in found_categories:
+                    self.log(f"   ✅ {expected} category present")
+                else:
+                    self.log(f"   ⚠️ {expected} category missing")
+        
+        # Test data export JSON (Art. 20 - Data portability)
+        success, response = self.run_test(
+            "Export personal data as JSON",
+            "GET",
+            "gdpr/export?format=json",
+            200
+        )
+        
+        if success:
+            self.log("✅ JSON data export successful")
+        
+        # Test data export CSV (Art. 20 - Data portability)
+        success, response = self.run_test(
+            "Export personal data as CSV",
+            "GET",
+            "gdpr/export?format=csv",
+            200
+        )
+        
+        if success:
+            self.log("✅ CSV data export successful")
+        
+        # Test consents (Art. 7)
+        success, response = self.run_test(
+            "Get user consents",
+            "GET",
+            "gdpr/consents",
+            200
+        )
+        
+        if success and response:
+            consents = response
+            self.log(f"✅ Found {len(consents)} consent records")
+        
+        # Test deletion request (Art. 17 - Right to be forgotten)
+        deletion_data = {
+            "confirm": True,
+            "reason": "Test deletion request for GDPR compliance testing"
+        }
+        
+        success, response = self.run_test(
+            "Submit deletion request (Art. 17)",
+            "POST",
+            "gdpr/delete-request",
+            200,
+            data=deletion_data
+        )
+        
+        if success:
+            self.log("✅ Deletion request submitted successfully")
+        
+        # Test getting deletion requests (admin only)
+        success, response = self.run_test(
+            "Get deletion requests (admin)",
+            "GET",
+            "gdpr/deletion-requests",
+            200
+        )
+        
+        if success and response:
+            requests = response
+            self.log(f"✅ Found {len(requests)} deletion requests")
+        
+        return True
+
     def run_all_tests(self):
         """Run comprehensive test suite"""
         self.log("🚀 Starting Onboarding-Automat Backend API Tests")
