@@ -469,6 +469,12 @@ def verify_master_key(key: str):
         raise HTTPException(status_code=403, detail="Ungültiger Master-Admin-Key")
     return True
 
+def get_org_filter(current_user: dict) -> dict:
+    """Get organization filter for queries - super admins see all"""
+    if current_user.get("is_super_admin"):
+        return {}
+    return {"organization_id": current_user.get("organization_id")}
+
 # ============ LICENSE & ORGANIZATION ROUTES ============
 
 @api_router.post("/admin/generate-license-keys", response_model=List[LicenseKeyResponse])
