@@ -907,6 +907,38 @@ async def get_cases(status: Optional[str] = None, case_type: Optional[str] = Non
         query["id"] = {"$in": task_cases}
     
     cases = await db.cases.find(query, {"_id": 0}).to_list(1000)
+    if not cases:
+        return []
+    
+    # OPTIMIZED: Batch fetch all tasks for all cases in ONE query instead of N queries
+    case_ids = [c["id"] for c in cases]
+    all_tasks = await db.tasks.find({"case_id": {"$in": case_ids}}, {"_id": 0}).to_list(10000)
+    
+    # OPTIMIZED: Batch fetch all evidence counts in ONE aggregation instead of N*M queries
+    task_ids = [t["id"] for t in all_tasks]
+    if task_ids:
+        evidence_pipeline = [
+            {"$match": {"task_id": {"$in": task_ids}}},
+            {"$group": {"_id": "$task_id", "count": {"$sum": 1}}}
+        ]
+        evidence_counts = {doc["_id"]: doc["count"] for doc in await db.evidence.aggregate(evidence_pipeline).to_list(10000)}
+    else:
+        evidence_counts = {}
+    
+    # Build tasks map by case_id
+    tasks_by_case = {}
+    for task in all_tasks:
+        case_id = task["case_id"]
+        if case_id not in tasks_by_case:
+            tasks_by_case[case_id] = []
+        
+        # Add evidence info
+        if "evidence_required" not in task:
+            task["evidence_required"] = False
+        task["evidence_uploaded"] = evidence_counts.get(task["id"], 0) > 0
+        tasks_by_case[case_id].append(task)
+    
+    # Build result
     result = []
     for c in cases:
         # Backward compatibility
@@ -918,14 +950,8 @@ async def get_cases(status: Optional[str] = None, case_type: Optional[str] = Non
             c["new_role"] = None
         if "old_role" not in c:
             c["old_role"] = None
-        tasks = await db.tasks.find({"case_id": c["id"]}, {"_id": 0}).to_list(100)
-        # Add evidence info to tasks
-        for t in tasks:
-            if "evidence_required" not in t:
-                t["evidence_required"] = False
-            evidence_count = await db.evidence.count_documents({"task_id": t["id"]})
-            t["evidence_uploaded"] = evidence_count > 0
-        c["tasks"] = tasks
+        
+        c["tasks"] = tasks_by_case.get(c["id"], [])
         result.append(OnboardingCaseResponse(**c))
     return result
 
