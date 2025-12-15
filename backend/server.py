@@ -696,6 +696,12 @@ async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(g
         "created_by": current_user["id"],
         "created_at": now
     }
+    
+    # Add rolechange-specific fields
+    if data.case_type == "rolechange":
+        case_doc["new_role"] = data.new_role
+        case_doc["old_role"] = data.old_role
+    
     await db.cases.insert_one(case_doc)
     
     tasks = []
