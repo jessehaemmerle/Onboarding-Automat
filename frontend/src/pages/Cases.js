@@ -7,7 +7,8 @@ import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { Search, Plus, Calendar, ArrowUpDown, Users } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Search, Plus, Calendar, ArrowUpDown, Users, UserMinus, Paperclip } from "lucide-react";
 import { format, parseISO, isPast } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -20,22 +21,35 @@ export default function Cases() {
   const [sortBy, setSortBy] = useState("start_date");
   const [searchParams, setSearchParams] = useSearchParams();
   const statusFilter = searchParams.get("status") || "all";
+  const caseTypeFilter = searchParams.get("case_type") || "all";
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchCases();
-  }, [statusFilter]);
+  }, [statusFilter, caseTypeFilter]);
 
   const fetchCases = async () => {
     try {
-      const url = statusFilter !== "all" ? `${API}/cases?status=${statusFilter}` : `${API}/cases`;
+      let url = `${API}/cases?`;
+      if (statusFilter !== "all") url += `status=${statusFilter}&`;
+      if (caseTypeFilter !== "all") url += `case_type=${caseTypeFilter}`;
       const res = await axios.get(url);
       setCases(res.data);
     } catch (err) {
-      toast.error("Fehler beim Laden der Onboardings");
+      toast.error("Fehler beim Laden");
     } finally {
       setLoading(false);
     }
+  };
+
+  const updateFilter = (key, value) => {
+    const params = new URLSearchParams(searchParams);
+    if (value === "all") {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+    setSearchParams(params);
   };
 
   const filteredCases = cases
