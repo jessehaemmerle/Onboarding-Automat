@@ -212,11 +212,13 @@ class OnboardingCaseCreate(BaseModel):
     employee_name: str
     employee_email: EmailStr
     template_id: str
-    start_date: str  # For offboarding this is exit_date
+    start_date: str  # For offboarding this is exit_date, for rolechange this is transition_date
     location: str = ""
     manager_email: EmailStr
-    case_type: str = "onboarding"  # onboarding or offboarding
-    linked_case_id: Optional[str] = None  # Link offboarding to existing onboarding case
+    case_type: str = "onboarding"  # onboarding, offboarding, or rolechange
+    linked_case_id: Optional[str] = None  # Link offboarding/rolechange to existing case
+    new_role: Optional[str] = None  # For rolechange: the new role name
+    old_role: Optional[str] = None  # For rolechange: the previous role name
 
 class TaskResponse(BaseModel):
     id: str
@@ -253,12 +255,14 @@ class OnboardingCaseResponse(BaseModel):
     employee_email: str
     template_id: str
     template_name_snapshot: str
-    case_type: str = "onboarding"  # onboarding or offboarding
-    start_date: str  # For offboarding this is exit_date
+    case_type: str = "onboarding"  # onboarding, offboarding, or rolechange
+    start_date: str  # For offboarding this is exit_date, for rolechange this is transition_date
     location: str
     manager_email: str
     status: str
-    linked_case_id: Optional[str] = None  # Link offboarding to onboarding
+    linked_case_id: Optional[str] = None  # Link offboarding/rolechange to onboarding
+    new_role: Optional[str] = None  # For rolechange: the new role name
+    old_role: Optional[str] = None  # For rolechange: the previous role name
     created_by: str
     created_at: str
     tasks: List[TaskResponse] = []
@@ -273,6 +277,8 @@ class DashboardStats(BaseModel):
     completed_cases: int
     active_offboardings: int = 0
     completed_offboardings: int = 0
+    active_rolechanges: int = 0
+    completed_rolechanges: int = 0
 
 class OrgSettingsBase(BaseModel):
     org_name: str = "Meine Firma"
