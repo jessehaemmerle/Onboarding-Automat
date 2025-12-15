@@ -640,6 +640,10 @@ async def get_cases(status: Optional[str] = None, case_type: Optional[str] = Non
             c["case_type"] = "onboarding"
         if "linked_case_id" not in c:
             c["linked_case_id"] = None
+        if "new_role" not in c:
+            c["new_role"] = None
+        if "old_role" not in c:
+            c["old_role"] = None
         tasks = await db.tasks.find({"case_id": c["id"]}, {"_id": 0}).to_list(100)
         # Add evidence info to tasks
         for t in tasks:
