@@ -136,11 +136,34 @@ async def data_retention_cleanup():
             logger.error(f"Data retention cleanup error: {e}")
             await asyncio.sleep(3600)  # Wait 1 hour on error before retry
 
+async def create_indexes():
+    """Create database indexes for optimal query performance"""
+    try:
+        # Organization-based queries (most common filter)
+        await db.users.create_index("organization_id")
+        await db.cases.create_index([("organization_id", 1), ("status", 1)])
+        await db.cases.create_index([("organization_id", 1), ("case_type", 1)])
+        await db.tasks.create_index([("organization_id", 1), ("case_id", 1)])
+        await db.tasks.create_index([("organization_id", 1), ("owner_email", 1)])
+        await db.templates.create_index("organization_id")
+        await db.owner_roles.create_index("organization_id")
+        
+        # Evidence lookup optimization
+        await db.evidence.create_index("task_id")
+        
+        # License key lookup
+        await db.license_keys.create_index([("key", 1), ("status", 1)])
+        
+        logger.info("✅ Database indexes created successfully")
+    except Exception as e:
+        logger.warning(f"Index creation: {e} (may already exist)")
+
 # Start background task on app startup
 @app.on_event("startup")
 async def start_background_tasks():
+    await create_indexes()
     asyncio.create_task(data_retention_cleanup())
-    logger.info("Background data retention task started")
+    logger.info("✅ Application startup complete - indexes created, data retention scheduled")
 
 # ============ PYDANTIC MODELS ============
 
