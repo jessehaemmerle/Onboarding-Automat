@@ -18,9 +18,15 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login(loginData.email, loginData.password);
+      const response = await login(loginData.email, loginData.password);
       toast.success("Willkommen zurück!");
-      navigate("/");
+      
+      // Super-Admins zum Admin-Bereich weiterleiten
+      if (response.user.is_super_admin) {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       toast.error(err.response?.data?.detail || "Login fehlgeschlagen");
     } finally {
