@@ -1177,6 +1177,16 @@ async def login(credentials: UserLogin):
         })
         raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten")
     
+    # Check if user is blocked
+    if user.get("status") == "blocked":
+        raise HTTPException(status_code=403, detail="Ihr Konto wurde gesperrt. Kontaktieren Sie Ihren Administrator.")
+    
+    # Check if organization is suspended (unless super admin)
+    if not user.get("is_super_admin") and user.get("organization_id"):
+        org = await db.organizations.find_one({"id": user["organization_id"]}, {"_id": 0})
+        if org and org.get("status") in ["suspended", "inactive"]:
+            raise HTTPException(status_code=403, detail="Ihre Organisation wurde deaktiviert. Kontaktieren Sie den Support.")
+    
     # Get organization info
     org_name = "Unknown"
     if user.get("organization_id"):
