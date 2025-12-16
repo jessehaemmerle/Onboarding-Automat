@@ -114,6 +114,132 @@ class OnboardingAutomatTester:
             
         return True
 
+    def test_super_admin_auth(self):
+        """Test Super-Admin authentication and access"""
+        self.log("\n=== TESTING SUPER-ADMIN AUTHENTICATION ===")
+        
+        # Test Super-Admin login
+        success, response = self.run_test(
+            "Super-Admin login",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "jesse@haemmerle.at", "password": "test123456"}
+        )
+        
+        if success and 'access_token' in response:
+            super_admin_token = response['access_token']
+            user_data = response.get('user', {})
+            
+            # Check if is_super_admin flag is present and true
+            is_super_admin = user_data.get('is_super_admin', False)
+            if is_super_admin:
+                self.log("✅ Super-Admin login successful with is_super_admin: true")
+            else:
+                self.log(f"❌ Super-Admin login failed - is_super_admin: {is_super_admin}")
+                return False
+            
+            # Store super admin token for admin endpoint tests
+            original_token = self.token
+            self.token = super_admin_token
+            
+            # Test auth/me endpoint for Super-Admin
+            success, me_response = self.run_test(
+                "Get Super-Admin user info via /auth/me",
+                "GET",
+                "auth/me",
+                200
+            )
+            
+            if success and me_response:
+                is_super_admin_me = me_response.get('is_super_admin', False)
+                if is_super_admin_me:
+                    self.log("✅ /auth/me correctly returns is_super_admin: true")
+                else:
+                    self.log(f"❌ /auth/me failed - is_super_admin: {is_super_admin_me}")
+                    return False
+            
+            # Test admin endpoints access
+            success = self.test_admin_endpoints_access()
+            
+            # Restore original token
+            self.token = original_token
+            
+            return success
+        else:
+            self.log("❌ Super-Admin login failed")
+            return False
+
+    def test_admin_endpoints_access(self):
+        """Test access to admin-only endpoints"""
+        self.log("\n=== TESTING ADMIN ENDPOINTS ACCESS ===")
+        
+        # Test GET /api/admin/licenses
+        success, response = self.run_test(
+            "Access admin licenses endpoint",
+            "GET",
+            "admin/licenses",
+            200
+        )
+        
+        if success:
+            self.log("✅ Super-Admin can access /admin/licenses")
+        else:
+            self.log("❌ Super-Admin cannot access /admin/licenses")
+            return False
+        
+        # Test GET /api/admin/organizations
+        success, response = self.run_test(
+            "Access admin organizations endpoint",
+            "GET",
+            "admin/organizations",
+            200
+        )
+        
+        if success:
+            self.log("✅ Super-Admin can access /admin/organizations")
+        else:
+            self.log("❌ Super-Admin cannot access /admin/organizations")
+            return False
+        
+        return True
+
+    def test_regular_user_admin_access(self):
+        """Test that regular users cannot access admin endpoints"""
+        self.log("\n=== TESTING REGULAR USER ADMIN ACCESS RESTRICTION ===")
+        
+        # Use regular user token (should be set from test_auth_flow)
+        if not self.token:
+            self.log("❌ No regular user token available")
+            return False
+        
+        # Test that regular user gets 403 for admin endpoints
+        success, response = self.run_test(
+            "Regular user tries to access admin licenses (should fail)",
+            "GET",
+            "admin/licenses",
+            403  # Should return 403 Forbidden
+        )
+        
+        if success:
+            self.log("✅ Regular user correctly blocked from /admin/licenses")
+        else:
+            self.log("❌ Regular user access control not working for /admin/licenses")
+        
+        success, response = self.run_test(
+            "Regular user tries to access admin organizations (should fail)",
+            "GET",
+            "admin/organizations",
+            403  # Should return 403 Forbidden
+        )
+        
+        if success:
+            self.log("✅ Regular user correctly blocked from /admin/organizations")
+        else:
+            self.log("❌ Regular user access control not working for /admin/organizations")
+        
+        return True
+
     def test_seed_data(self):
         """Test seed data loading"""
         self.log("\n=== TESTING SEED DATA ===")
