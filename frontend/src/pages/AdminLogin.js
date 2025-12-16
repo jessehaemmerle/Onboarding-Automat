@@ -34,7 +34,7 @@ export default function AdminLogin() {
       axios.defaults.headers.common["Authorization"] = `Bearer ${response.data.access_token}`;
 
       toast.success("Willkommen zurück, Administrator!");
-      navigate("/admin/dashboard");
+      navigate("/admin");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Login fehlgeschlagen");
     } finally {
