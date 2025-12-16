@@ -7,18 +7,37 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "../components/ui/dialog";
-import { Plus, Trash2, Edit, Save, Users, Building2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Edit, Save, Users, Building2, Loader2, Tags } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+const COLOR_OPTIONS = [
+  { value: "#3b82f6", label: "Blau" },
+  { value: "#8b5cf6", label: "Violett" },
+  { value: "#10b981", label: "Grün" },
+  { value: "#f59e0b", label: "Orange" },
+  { value: "#ef4444", label: "Rot" },
+  { value: "#ec4899", label: "Pink" },
+  { value: "#06b6d4", label: "Cyan" },
+  { value: "#6b7280", label: "Grau" },
+];
 
 export default function Settings() {
   const [settings, setSettings] = useState({ org_name: "", org_timezone: "Europe/Berlin", reminder_days_before: 3, reminder_days_after: 2 });
   const [ownerRoles, setOwnerRoles] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Role dialog state
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
   const [roleForm, setRoleForm] = useState({ name: "", emails: "" });
+  
+  // Category dialog state
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [categoryForm, setCategoryForm] = useState({ name: "", color: "#3b82f6" });
 
   useEffect(() => {
     fetchData();
@@ -26,12 +45,14 @@ export default function Settings() {
 
   const fetchData = async () => {
     try {
-      const [settingsRes, rolesRes] = await Promise.all([
+      const [settingsRes, rolesRes, categoriesRes] = await Promise.all([
         axios.get(`${API}/settings`),
         axios.get(`${API}/owner-roles`),
+        axios.get(`${API}/categories`),
       ]);
       setSettings(settingsRes.data);
       setOwnerRoles(rolesRes.data);
+      setCategories(categoriesRes.data);
     } catch (err) {
       toast.error("Fehler beim Laden der Einstellungen");
     } finally {
@@ -51,6 +72,7 @@ export default function Settings() {
     }
   };
 
+  // Owner Role functions
   const openRoleDialog = (role = null) => {
     if (role) {
       setEditingRole(role);
@@ -90,6 +112,50 @@ export default function Settings() {
     try {
       await axios.delete(`${API}/owner-roles/${id}`);
       toast.success("Rolle gelöscht");
+      fetchData();
+    } catch (err) {
+      toast.error("Fehler beim Löschen");
+    }
+  };
+
+  // Category functions
+  const openCategoryDialog = (category = null) => {
+    if (category) {
+      setEditingCategory(category);
+      setCategoryForm({ name: category.name, color: category.color });
+    } else {
+      setEditingCategory(null);
+      setCategoryForm({ name: "", color: "#3b82f6" });
+    }
+    setShowCategoryDialog(true);
+  };
+
+  const saveCategory = async () => {
+    if (!categoryForm.name.trim()) {
+      toast.error("Bitte geben Sie einen Namen ein");
+      return;
+    }
+    
+    try {
+      if (editingCategory) {
+        await axios.put(`${API}/categories/${editingCategory.id}`, categoryForm);
+        toast.success("Kategorie aktualisiert");
+      } else {
+        await axios.post(`${API}/categories`, categoryForm);
+        toast.success("Kategorie erstellt");
+      }
+      setShowCategoryDialog(false);
+      fetchData();
+    } catch (err) {
+      toast.error("Fehler beim Speichern");
+    }
+  };
+
+  const deleteCategory = async (id) => {
+    if (!window.confirm("Kategorie wirklich löschen? Bestehende Aufgaben behalten ihren Kategorie-Namen.")) return;
+    try {
+      await axios.delete(`${API}/categories/${id}`);
+      toast.success("Kategorie gelöscht");
       fetchData();
     } catch (err) {
       toast.error("Fehler beim Löschen");
@@ -172,6 +238,66 @@ export default function Settings() {
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Speichern</>}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Categories */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Tags className="w-5 h-5" /> Kategorien
+            </CardTitle>
+            <CardDescription>Kategorien für Aufgaben in Templates</CardDescription>
+          </div>
+          <Button onClick={() => openCategoryDialog()} variant="outline" size="sm" data-testid="add-category">
+            <Plus className="w-4 h-4 mr-2" /> Neue Kategorie
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {categories.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <Tags className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+              <p>Keine Kategorien definiert</p>
+              <p className="text-sm mt-1">Erstellen Sie Kategorien wie IT, Admin, HR...</p>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {categories.map(cat => (
+                <div 
+                  key={cat.id} 
+                  className="flex items-center gap-2 px-3 py-2 border rounded-lg bg-slate-50 group"
+                  data-testid={`category-${cat.id}`}
+                >
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: cat.color }}
+                  />
+                  <span className="font-medium text-slate-900">{cat.name}</span>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 w-6 p-0"
+                      onClick={() => openCategoryDialog(cat)} 
+                      data-testid={`edit-category-${cat.id}`}
+                    >
+                      <Edit className="w-3 h-3" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 w-6 p-0 text-red-600 hover:text-red-700" 
+                      onClick={() => deleteCategory(cat.id)} 
+                      data-testid={`delete-category-${cat.id}`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -261,6 +387,54 @@ export default function Settings() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRoleDialog(false)}>Abbrechen</Button>
             <Button onClick={saveRole} className="btn-primary" data-testid="save-role">Speichern</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category Dialog */}
+      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingCategory ? "Kategorie bearbeiten" : "Neue Kategorie"}</DialogTitle>
+            <DialogDescription>
+              Definieren Sie eine Kategorie für Aufgaben
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="category-name">Name *</Label>
+              <Input
+                id="category-name"
+                placeholder="z.B. IT, Admin, HR"
+                value={categoryForm.name}
+                onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                data-testid="category-name-input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Farbe</Label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_OPTIONS.map(color => (
+                  <button
+                    key={color.value}
+                    type="button"
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${
+                      categoryForm.color === color.value 
+                        ? "border-slate-900 scale-110" 
+                        : "border-transparent hover:scale-105"
+                    }`}
+                    style={{ backgroundColor: color.value }}
+                    onClick={() => setCategoryForm({ ...categoryForm, color: color.value })}
+                    title={color.label}
+                    data-testid={`color-${color.value}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCategoryDialog(false)}>Abbrechen</Button>
+            <Button onClick={saveCategory} className="btn-primary" data-testid="save-category">Speichern</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
