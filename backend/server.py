@@ -1509,6 +1509,43 @@ async def delete_owner_role(role_id: str, admin: dict = Depends(require_admin)):
         raise HTTPException(status_code=404, detail="Rolle nicht gefunden")
     return {"message": "Gelöscht"}
 
+# ============ CATEGORIES ROUTES ============
+
+@api_router.get("/categories", response_model=List[CategoryResponse])
+async def get_categories(current_user: dict = Depends(get_current_user)):
+    query = get_org_filter(current_user)
+    categories = await db.categories.find(query, {"_id": 0}).to_list(100)
+    return [CategoryResponse(**c) for c in categories]
+
+@api_router.post("/categories", response_model=CategoryResponse)
+async def create_category(data: CategoryCreate, admin: dict = Depends(require_admin)):
+    category_id = str(uuid.uuid4())
+    doc = {
+        "id": category_id,
+        "name": data.name,
+        "color": data.color,
+        "organization_id": admin["organization_id"]
+    }
+    await db.categories.insert_one(doc)
+    return CategoryResponse(**doc)
+
+@api_router.put("/categories/{category_id}", response_model=CategoryResponse)
+async def update_category(category_id: str, data: CategoryCreate, admin: dict = Depends(require_admin)):
+    query = {"id": category_id, **get_org_filter(admin)}
+    await db.categories.update_one(query, {"$set": {"name": data.name, "color": data.color}})
+    updated = await db.categories.find_one(query, {"_id": 0})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Kategorie nicht gefunden")
+    return CategoryResponse(**updated)
+
+@api_router.delete("/categories/{category_id}")
+async def delete_category(category_id: str, admin: dict = Depends(require_admin)):
+    query = {"id": category_id, **get_org_filter(admin)}
+    result = await db.categories.delete_one(query)
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Kategorie nicht gefunden")
+    return {"message": "Gelöscht"}
+
 # ============ TEMPLATES ROUTES ============
 
 @api_router.get("/templates", response_model=List[TemplateResponse])
