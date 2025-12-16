@@ -471,7 +471,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         org = await db.organizations.find_one({"id": user["organization_id"]}, {"_id": 0, "name": 1})
         user["organization_name"] = org["name"] if org else "Unknown"
     else:
-        user["organization_name"] = "Unknown"
+        user["organization_id"] = ""  # Set empty string for super admins
+        user["organization_name"] = "Super Admin"
     
     # Check if super admin
     user["is_super_admin"] = user.get("is_super_admin", False)
