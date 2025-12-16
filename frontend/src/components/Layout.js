@@ -31,8 +31,10 @@ export default function Layout() {
     { to: "/settings", label: "Einstellungen", icon: Settings },
   ];
 
-  // Admin-Navigation komplett entfernt - Admin-Bereich ist jetzt unter /admin/login erreichbar
-  const adminNavItems = [];
+  // Admin-Navigation für Organisations-Admins (Benutzerverwaltung)
+  const adminNavItems = isAdmin ? [
+    { to: "/user-management", label: "Benutzerverwaltung", icon: Users },
+  ] : [];
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
