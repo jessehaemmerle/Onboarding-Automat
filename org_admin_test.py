@@ -11,7 +11,7 @@ from datetime import datetime
 import uuid
 
 class OrgAdminTester:
-    def __init__(self, base_url="https://rolemaster-16.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://onboard-admin.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.tests_run = 0
