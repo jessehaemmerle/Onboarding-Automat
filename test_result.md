@@ -158,27 +158,33 @@ metadata:
 
   - task: "Categories Management UI"
     implemented: true
-    working: needs_testing
+    working: true
     file: "frontend/src/pages/Settings.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: needs_testing
         agent: "main"
         comment: "NEW: Added categories section in Settings page with color picker. Users can create, edit, and delete categories. Categories shown with colored dots."
+      - working: true
+        agent: "testing"
+        comment: "✅ CATEGORIES MANAGEMENT UI TESTING COMPLETED SUCCESSFULLY (100% success rate - 4/4 operations tested): Tested with organization admin credentials admin@testfirma.de / Test123!. 1) ✅ Categories section visible with 5 default categories (IT & Technik, Admin, Manager, HR, Security) displayed as colored badges, 2) ✅ CREATE: 'Neue Kategorie' button opens dialog, category creation with name and color selection works perfectly, new category appears in list, 3) ✅ EDIT: Hover shows edit/delete buttons, edit dialog opens, name and color updates work correctly, 4) ✅ DELETE: Confirmation dialog works, category deletion successful and verified. All CRUD operations working perfectly with proper toast notifications and UI feedback. Color picker with 8 color options functional."
 
   - task: "Template Editor Dynamic Categories"
     implemented: true
-    working: needs_testing
+    working: true
     file: "frontend/src/pages/TemplateEditor.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: needs_testing
         agent: "main"
         comment: "NEW: Template editor now loads categories from API instead of using hardcoded CATEGORIES array. Category dropdown populated dynamically."
+      - working: true
+        agent: "testing"
+        comment: "✅ TEMPLATE EDITOR DYNAMIC CATEGORIES TESTING COMPLETED SUCCESSFULLY (100% success rate - 5/5 expected categories found): Tested with organization admin credentials admin@testfirma.de / Test123!. 1) ✅ Template editor loads correctly at /templates/new, 2) ✅ 'Task hinzufügen' button adds new task successfully, 3) ✅ Category dropdown in task row loads dynamically from API with all 5 expected categories (IT & Technik, Admin, Manager, HR, Security), 4) ✅ Category selection works correctly - selected 'IT & Technik' and confirmed in UI, 5) ✅ API integration working perfectly - categories loaded from /api/categories endpoint instead of hardcoded array. Dynamic category loading fully functional."
 
 test_plan:
   current_focus: ["Categories Management UI", "Template Editor Dynamic Categories"]
