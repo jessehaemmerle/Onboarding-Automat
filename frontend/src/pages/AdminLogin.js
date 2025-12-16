@@ -1,37 +1,32 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { toast } from "sonner";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Shield, ArrowRight, Loader2, Lock } from "lucide-react";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { useAuth } from "../context/AuthContext";
 
 export default function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      const response = await axios.post(`${API}/auth/login`, loginData);
+      const response = await login(loginData.email, loginData.password);
       
       // Check if user is super admin
-      if (!response.data.user.is_super_admin) {
+      if (!response.user.is_super_admin) {
         toast.error("Keine Admin-Berechtigung. Dieser Login ist nur für System-Administratoren.");
         setIsLoading(false);
         return;
       }
-
-      // Store token
-      localStorage.setItem("token", response.data.access_token);
-      axios.defaults.headers.common["Authorization"] = `Bearer ${response.data.access_token}`;
 
       toast.success("Willkommen zurück, Administrator!");
       navigate("/admin");
