@@ -1008,8 +1008,137 @@ async def set_license_expiry(license_id: str, expiry_date: str, admin: dict = De
 
 # ============ ORGANIZATION ADMIN FUNCTIONS (for company admins) ============
 
+class OrgUserCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    role: str = "user"  # user or admin
+
+@api_router.post("/org/users")
+async def create_org_user(user_data: OrgUserCreate, current_user: dict = Depends(require_admin)):
+    """Create a new user in the current organization - Org Admin only"""
+    org_id = current_user.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=400, detail="Keine Organisation zugeordnet")
+    
+    # Check if email already exists
+    existing = await db.users.find_one({"email": user_data.email}, {"_id": 0, "id": 1})
+    if existing:
+        raise HTTPException(status_code=400, detail="Diese E-Mail-Adresse ist bereits registriert")
+    
+    # Validate role
+    if user_data.role not in ["user", "admin"]:
+        raise HTTPException(status_code=400, detail="Rolle muss 'user' oder 'admin' sein")
+    
+    # Check user limit for organization
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organisation nicht gefunden")
+    
+    current_user_count = await db.users.count_documents({"organization_id": org_id})
+    user_limit = org.get("user_limit", 10)
+    
+    if current_user_count >= user_limit:
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Benutzer-Limit erreicht ({current_user_count}/{user_limit}). Kontaktieren Sie den Support für ein Upgrade."
+        )
+    
+    # Validate password
+    if len(user_data.password) < 8:
+        raise HTTPException(status_code=400, detail="Passwort muss mindestens 8 Zeichen haben")
+    
+    # Create user
+    new_user = {
+        "id": str(uuid.uuid4()),
+        "email": user_data.email,
+        "name": user_data.name,
+        "hashed_password": pwd_context.hash(user_data.password),
+        "password_hash": pwd_context.hash(user_data.password),
+        "role": user_data.role,
+        "organization_id": org_id,
+        "is_super_admin": False,
+        "status": "active",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.insert_one(new_user)
+    
+    await log_audit(
+        user=current_user,
+        action="create",
+        resource_type="user",
+        resource_id=new_user["id"],
+        resource_name=user_data.email,
+        details=f"Neuer Benutzer erstellt: {user_data.name} ({user_data.role})"
+    )
+    
+    return {
+        "message": f"Benutzer '{user_data.name}' erfolgreich erstellt",
+        "user_id": new_user["id"],
+        "email": user_data.email
+    }
+
+@api_router.get("/org/info")
+async def get_org_info(current_user: dict = Depends(require_admin)):
+    """Get organization info including user limit - Org Admin only"""
+    org_id = current_user.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=400, detail="Keine Organisation zugeordnet")
+    
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organisation nicht gefunden")
+    
+    user_count = await db.users.count_documents({"organization_id": org_id})
+    user_limit = org.get("user_limit", 10)
+    
+    return {
+        "id": org["id"],
+        "name": org["name"],
+        "status": org.get("status", "active"),
+        "user_count": user_count,
+        "user_limit": user_limit,
+        "created_at": org.get("created_at")
+    }
+
+@api_router.patch("/org/users/{user_id}/role")
+async def update_org_user_role(user_id: str, role: str, current_user: dict = Depends(require_admin)):
+    """Change role of a user in the organization - Org Admin only"""
+    if role not in ["user", "admin"]:
+        raise HTTPException(status_code=400, detail="Rolle muss 'user' oder 'admin' sein")
+    
+    org_id = current_user.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=400, detail="Keine Organisation zugeordnet")
+    
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    
+    if user.get("organization_id") != org_id:
+        raise HTTPException(status_code=403, detail="Keine Berechtigung für diesen Benutzer")
+    
+    if user_id == current_user.get("id"):
+        raise HTTPException(status_code=400, detail="Eigene Rolle kann nicht geändert werden")
+    
+    old_role = user.get("role")
+    await db.users.update_one({"id": user_id}, {"$set": {"role": role}})
+    
+    await log_audit(
+        user=current_user,
+        action="update",
+        resource_type="user",
+        resource_id=user_id,
+        resource_name=user.get("email"),
+        details=f"Benutzer-Rolle geändert: {old_role} -> {role}",
+        old_value=old_role,
+        new_value=role
+    )
+    
+    return {"message": f"Benutzer-Rolle auf '{role}' geändert", "user_id": user_id}
+
 @api_router.get("/org/users")
-async def get_org_users(current_user: dict = Depends(require_admin)):
     """Get all users in the current organization - Org Admin only"""
     org_id = current_user.get("organization_id")
     if not org_id:
