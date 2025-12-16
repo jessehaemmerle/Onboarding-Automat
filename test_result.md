@@ -141,8 +141,44 @@ metadata:
   test_sequence: 1
   run_ui: false
 
+  - task: "Categories CRUD API"
+    implemented: true
+    working: needs_testing
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: needs_testing
+        agent: "main"
+        comment: "NEW: Added CRUD endpoints for categories (GET/POST/PUT/DELETE /api/categories). Categories are organization-scoped like owner_roles. Default categories created on organization registration."
+
+  - task: "Categories Management UI"
+    implemented: true
+    working: needs_testing
+    file: "frontend/src/pages/Settings.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: needs_testing
+        agent: "main"
+        comment: "NEW: Added categories section in Settings page with color picker. Users can create, edit, and delete categories. Categories shown with colored dots."
+
+  - task: "Template Editor Dynamic Categories"
+    implemented: true
+    working: needs_testing
+    file: "frontend/src/pages/TemplateEditor.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: needs_testing
+        agent: "main"
+        comment: "NEW: Template editor now loads categories from API instead of using hardcoded CATEGORIES array. Category dropdown populated dynamically."
+
 test_plan:
-  current_focus: []
+  current_focus: ["Categories CRUD API", "Categories Management UI", "Template Editor Dynamic Categories"]
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
