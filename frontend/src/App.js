@@ -16,6 +16,9 @@ import AuditLog from "./pages/AuditLog";
 import PrivacyCenter from "./pages/PrivacyCenter";
 import AdminPanel from "./pages/AdminPanel";
 import AdminLogin from "./pages/AdminLogin";
+import AdminUsers from "./pages/AdminUsers";
+import AdminStats from "./pages/AdminStats";
+import AdminAuditLog from "./pages/AdminAuditLog";
 import Layout from "./components/Layout";
 import AdminLayout from "./components/AdminLayout";
 
@@ -49,6 +52,9 @@ function App() {
           <Route path="/admin" element={<SuperAdminRoute><AdminLayout /></SuperAdminRoute>}>
             <Route index element={<AdminPanel />} />
             <Route path="dashboard" element={<AdminPanel />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="stats" element={<AdminStats />} />
+            <Route path="audit-log" element={<AdminAuditLog />} />
           </Route>
           
           {/* Main App Routes */}
