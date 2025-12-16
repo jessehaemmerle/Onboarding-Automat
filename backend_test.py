@@ -1464,7 +1464,9 @@ class OnboardingAutomatTester:
         # Run all test suites
         test_suites = [
             self.test_seed_data,
-            self.test_super_admin_auth,  # Test Super-Admin functionality
+            self.test_super_admin_auth,  # Test Super-Admin functionality with new endpoints
+            self.test_organization_admin_endpoints,  # Test Organization-Admin endpoints
+            self.test_blocked_user_login,  # Test blocked user login restriction
             self.test_regular_user_admin_access,  # Test regular user restrictions
             self.test_templates,
             self.test_owner_roles,
