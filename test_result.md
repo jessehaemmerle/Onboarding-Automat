@@ -28,7 +28,7 @@ backend:
 
   - task: "Organization-Admin Endpoints"
     implemented: true
-    working: false
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
@@ -37,6 +37,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ ORGANIZATION-ADMIN ENDPOINTS ISSUE: GET /api/org/users returns 400 'Keine Organisation zugeordnet' for admin@startmate.de user. This user appears to be a Super-Admin without organization_id rather than an organization admin. Need to test with proper organization admin user or create one for testing. Other org admin endpoints (reset-password, status, delete) exist and validate properly."
+      - working: true
+        agent: "testing"
+        comment: "✅ ALL 7 ORGANIZATION-ADMIN ENDPOINTS WORKING PERFECTLY (100% success rate - 11/11 tests passed): Tested with proper organization admin credentials admin@testfirma.de. 1) POST /api/org/users - Create new user (✅ created user ff55996f-f35d-42e9-b2fd-638695dd6d3b), 2) GET /api/org/info - Organization info with user_count, user_limit, name (✅ Test Firma GmbH, 1/20 users), 3) PATCH /api/org/users/{user_id}/role - Change user role admin↔user (✅ both directions work), 4) GET /api/org/users - Get all organization users (✅ 2 users retrieved), 5) POST /api/org/users/{user_id}/reset-password - Reset password (✅ password reset successful), 6) PATCH /api/org/users/{user_id}/status - Block/unblock user (✅ blocked→active works), 7) DELETE /api/org/users/{user_id} - Delete user (✅ user deleted and verified removed from list). Complete user lifecycle tested successfully with proper organization admin authentication."
 
   - task: "Blocked User Login Restriction"
     implemented: true
