@@ -1671,6 +1671,7 @@ class OnboardingAutomatTester:
         test_suites = [
             self.test_seed_data,
             self.test_super_admin_auth,  # Test Super-Admin functionality with new endpoints
+            self.test_categories_crud_api,  # Test Categories CRUD API - NEW FEATURE
             self.test_organization_admin_endpoints,  # Test Organization-Admin endpoints
             self.test_blocked_user_login,  # Test blocked user login restriction
             self.test_regular_user_admin_access,  # Test regular user restrictions
