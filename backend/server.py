@@ -165,21 +165,39 @@ async def create_indexes():
         logger.warning(f"Index creation: {e} (may already exist)")
 
 async def ensure_super_admin():
-    """Create default Super-Admin if none exists - for deployment"""
+    """Create or update Super-Admin on startup - for deployment"""
     try:
-        # Check if any super admin exists
-        existing_super_admin = await db.users.find_one({"is_super_admin": True}, {"_id": 0, "email": 1})
-        
-        if existing_super_admin:
-            logger.info(f"✅ Super-Admin exists: {existing_super_admin.get('email')}")
-            return
-        
         # Get Super-Admin credentials from environment
         admin_email = os.environ.get('SUPER_ADMIN_EMAIL', 'jesse@haemmerle.at')
         admin_password = os.environ.get('SUPER_ADMIN_PASSWORD', 'Admin2024!')
         admin_name = os.environ.get('SUPER_ADMIN_NAME', 'Jesse (Super Admin)')
         
-        # Create Super-Admin
+        # Check if super admin with this email exists
+        existing_super_admin = await db.users.find_one({"email": admin_email}, {"_id": 0})
+        
+        if existing_super_admin:
+            # Update password and ensure is_super_admin flag is set
+            hashed_password = pwd_context.hash(admin_password)
+            await db.users.update_one(
+                {"email": admin_email},
+                {"$set": {
+                    "hashed_password": hashed_password,
+                    "password_hash": hashed_password,
+                    "is_super_admin": True,
+                    "status": "active",
+                    "name": admin_name
+                }}
+            )
+            logger.info(f"✅ Super-Admin updated: {admin_email}")
+            return
+        
+        # Check if any other super admin exists
+        any_super_admin = await db.users.find_one({"is_super_admin": True}, {"_id": 0, "email": 1})
+        if any_super_admin:
+            logger.info(f"✅ Super-Admin exists: {any_super_admin.get('email')}")
+            return
+        
+        # Create new Super-Admin
         super_admin = {
             "id": str(uuid.uuid4()),
             "email": admin_email,
@@ -195,10 +213,9 @@ async def ensure_super_admin():
         
         await db.users.insert_one(super_admin)
         logger.info(f"✅ Super-Admin created: {admin_email}")
-        logger.info(f"   ⚠️  WICHTIG: Ändern Sie das Passwort nach dem ersten Login!")
         
     except Exception as e:
-        logger.error(f"Error creating Super-Admin: {e}")
+        logger.error(f"Error with Super-Admin: {e}")
 
 # Start background task on app startup
 @app.on_event("startup")
