@@ -1,12 +1,15 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Shield, Key, Building2, LogOut, LayoutDashboard, Users } from "lucide-react";
+import { Shield, Key, Building2, LogOut, LayoutDashboard, Users, BarChart3, ScrollText } from "lucide-react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "./ui/dropdown-menu";
 
 const adminNavItems = [
-  { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },
+  { to: "/admin", icon: LayoutDashboard, label: "Lizenzen & Orgs", end: true },
+  { to: "/admin/users", icon: Users, label: "Benutzer" },
+  { to: "/admin/stats", icon: BarChart3, label: "Statistiken" },
+  { to: "/admin/audit-log", icon: ScrollText, label: "Audit-Log" },
 ];
 
 export default function AdminLayout() {
@@ -55,25 +58,6 @@ export default function AdminLayout() {
             </NavLink>
           ))}
 
-          {/* Schnellzugriff */}
-          <div className="my-4 border-t border-slate-700" />
-          <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Schnellzugriff
-          </div>
-          <NavLink
-            to="/admin#licenses"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-all duration-200"
-          >
-            <Key className="w-5 h-5" />
-            Lizenzen
-          </NavLink>
-          <NavLink
-            to="/admin#organizations"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-all duration-200"
-          >
-            <Building2 className="w-5 h-5" />
-            Organisationen
-          </NavLink>
         </nav>
 
         {/* User Info */}
