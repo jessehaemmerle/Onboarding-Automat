@@ -48,6 +48,12 @@ api_router = APIRouter(prefix="/api")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# ============ HEALTH CHECK ENDPOINT (for Kubernetes) ============
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Kubernetes liveness/readiness probes"""
+    return {"status": "healthy", "service": "onboarding-automat"}
+
 # ============ BACKGROUND CRON JOB ============
 
 async def data_retention_cleanup():
