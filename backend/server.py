@@ -296,6 +296,17 @@ class OwnerRoleCreate(OwnerRoleBase):
 class OwnerRoleResponse(OwnerRoleBase):
     id: str
 
+# Category Models
+class CategoryBase(BaseModel):
+    name: str
+    color: str = "#3b82f6"  # Default blue
+
+class CategoryCreate(CategoryBase):
+    pass
+
+class CategoryResponse(CategoryBase):
+    id: str
+
 class TemplateTaskBase(BaseModel):
     title: str
     description: str = ""
