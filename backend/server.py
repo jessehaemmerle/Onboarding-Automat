@@ -472,7 +472,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         user["organization_name"] = org["name"] if org else "Unknown"
     else:
         user["organization_id"] = ""  # Set empty string for super admins
-        user["organization_name"] = "Super Admin"
+        user["organization_name"] = "Super Admin" if user.get("is_super_admin") else "Unknown"
     
     # Check if super admin
     user["is_super_admin"] = user.get("is_super_admin", False)
