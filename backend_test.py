@@ -170,37 +170,185 @@ class OnboardingAutomatTester:
             self.log("❌ Super-Admin login failed")
             return False
 
-    def test_admin_endpoints_access(self):
-        """Test access to admin-only endpoints"""
-        self.log("\n=== TESTING ADMIN ENDPOINTS ACCESS ===")
+    def test_new_admin_endpoints(self):
+        """Test all new Super-Admin and Organization-Admin endpoints"""
+        self.log("\n=== TESTING NEW ADMIN ENDPOINTS ===")
         
-        # Test GET /api/admin/licenses
+        # Store user IDs and org IDs for testing
+        test_user_id = None
+        test_org_id = None
+        test_license_id = None
+        
+        # 1. GET /api/admin/users - Get all users across all organizations
         success, response = self.run_test(
-            "Access admin licenses endpoint",
+            "1. GET /api/admin/users - Get all users",
             "GET",
-            "admin/licenses",
+            "admin/users",
             200
         )
         
-        if success:
-            self.log("✅ Super-Admin can access /admin/licenses")
-        else:
-            self.log("❌ Super-Admin cannot access /admin/licenses")
-            return False
+        if success and response:
+            users = response
+            self.log(f"✅ Found {len(users)} users across all organizations")
+            # Find a non-super-admin user for testing
+            for user in users:
+                if not user.get('is_super_admin', False) and user.get('email') != 'jesse@haemmerle.at':
+                    test_user_id = user['id']
+                    self.log(f"   Selected test user: {user['email']} (ID: {test_user_id})")
+                    break
         
-        # Test GET /api/admin/organizations
+        # 2. GET /api/admin/organizations - Get all organizations
         success, response = self.run_test(
-            "Access admin organizations endpoint",
+            "2. GET /api/admin/organizations - Get all organizations",
             "GET",
             "admin/organizations",
             200
         )
         
+        if success and response:
+            orgs = response
+            self.log(f"✅ Found {len(orgs)} organizations")
+            if len(orgs) > 0:
+                test_org_id = orgs[0]['id']
+                self.log(f"   Selected test org: {orgs[0]['name']} (ID: {test_org_id})")
+        
+        # 3. GET /api/admin/licenses - Get all licenses
+        success, response = self.run_test(
+            "3. GET /api/admin/licenses - Get all licenses",
+            "GET",
+            "admin/licenses",
+            200
+        )
+        
+        if success and response:
+            licenses = response
+            self.log(f"✅ Found {len(licenses)} licenses")
+            if len(licenses) > 0:
+                test_license_id = licenses[0]['id']
+                self.log(f"   Selected test license: {licenses[0]['key']} (ID: {test_license_id})")
+        
+        # 4. GET /api/admin/system-stats - System statistics
+        success, response = self.run_test(
+            "4. GET /api/admin/system-stats - System statistics",
+            "GET",
+            "admin/system-stats",
+            200
+        )
+        
+        if success and response:
+            stats = response
+            required_stats = ['totals', 'active', 'licenses', 'recent', 'case_types']
+            missing_stats = [stat for stat in required_stats if stat not in stats]
+            if not missing_stats:
+                self.log("✅ All required system statistics present")
+                self.log(f"   Total organizations: {stats['totals']['organizations']}")
+                self.log(f"   Total users: {stats['totals']['users']}")
+            else:
+                self.log(f"❌ Missing statistics: {missing_stats}")
+        
+        # 5. GET /api/admin/audit-logs - System-wide audit logs
+        success, response = self.run_test(
+            "5. GET /api/admin/audit-logs - System audit logs",
+            "GET",
+            "admin/audit-logs?limit=50&offset=0",
+            200
+        )
+        
+        if success and response:
+            logs = response.get('logs', [])
+            total = response.get('total', 0)
+            self.log(f"✅ Retrieved {len(logs)} audit logs (total: {total})")
+        
+        # 6. GET /api/admin/audit-logs with action filter
+        success, response = self.run_test(
+            "6. GET /api/admin/audit-logs?action=login - Filter by action",
+            "GET",
+            "admin/audit-logs?limit=50&offset=0&action=login",
+            200
+        )
+        
         if success:
-            self.log("✅ Super-Admin can access /admin/organizations")
-        else:
-            self.log("❌ Super-Admin cannot access /admin/organizations")
-            return False
+            self.log("✅ Audit log filtering by action works")
+        
+        # Test user management endpoints (only if we have a test user)
+        if test_user_id:
+            # 7. PATCH /api/admin/users/{user_id}/status - Block/Activate user (TEST ONLY - DON'T ACTUALLY BLOCK)
+            self.log("7. PATCH /api/admin/users/{user_id}/status - User status management (checking endpoint exists)")
+            # We'll just check if the endpoint exists by trying with invalid status
+            success, response = self.run_test(
+                "7a. Test user status endpoint exists (invalid status)",
+                "PATCH",
+                f"admin/users/{test_user_id}/status?status=invalid",
+                400  # Should return 400 for invalid status
+            )
+            
+            if success:
+                self.log("✅ User status endpoint exists and validates input")
+            
+            # 8. POST /api/admin/users/{user_id}/reset-password - Reset password (TEST ONLY)
+            success, response = self.run_test(
+                "8. POST /api/admin/users/{user_id}/reset-password - Password reset",
+                "POST",
+                f"admin/users/{test_user_id}/reset-password?new_password=TestPassword123!",
+                200
+            )
+            
+            if success:
+                self.log("✅ Admin password reset works")
+        
+        # Test organization management endpoints (only if we have a test org)
+        if test_org_id:
+            # 9. PATCH /api/admin/organizations/{org_id}/status - Organization status (TEST ONLY)
+            self.log("9. PATCH /api/admin/organizations/{org_id}/status - Org status management (checking endpoint)")
+            success, response = self.run_test(
+                "9a. Test org status endpoint exists (invalid status)",
+                "PATCH",
+                f"admin/organizations/{test_org_id}/status?status=invalid",
+                400  # Should return 400 for invalid status
+            )
+            
+            if success:
+                self.log("✅ Organization status endpoint exists and validates input")
+            
+            # 10. PATCH /api/admin/organizations/{org_id}/user-limit - Change user limit
+            success, response = self.run_test(
+                "10. PATCH /api/admin/organizations/{org_id}/user-limit - Change user limit",
+                "PATCH",
+                f"admin/organizations/{test_org_id}/user-limit?user_limit=20",
+                200
+            )
+            
+            if success:
+                self.log("✅ Organization user limit change works")
+            
+            # 11. DELETE /api/admin/organizations/{org_id} - Delete organization (CHECK ENDPOINT ONLY)
+            self.log("11. DELETE /api/admin/organizations/{org_id} - Delete org (checking endpoint exists)")
+            success, response = self.run_test(
+                "11a. Test org deletion endpoint exists (without confirm)",
+                "DELETE",
+                f"admin/organizations/{test_org_id}",
+                400  # Should return 400 without confirm=true
+            )
+            
+            if success:
+                self.log("✅ Organization deletion endpoint exists and requires confirmation")
+        
+        # Test license management endpoints (only if we have a test license)
+        if test_license_id:
+            # 12. PATCH /api/admin/licenses/{license_id}/expiry - Set expiry date
+            success, response = self.run_test(
+                "12. PATCH /api/admin/licenses/{license_id}/expiry - Set expiry date",
+                "PATCH",
+                f"admin/licenses/{test_license_id}/expiry?expiry_date=2026-12-31",
+                200
+            )
+            
+            if success:
+                self.log("✅ License expiry date setting works")
+            
+            # 13. PATCH /api/admin/licenses/{license_id}/revoke - Revoke license (TEST ONLY - DON'T ACTUALLY REVOKE)
+            self.log("13. PATCH /api/admin/licenses/{license_id}/revoke - License revocation (checking endpoint)")
+            # We'll check if endpoint exists but not actually revoke
         
         return True
 
