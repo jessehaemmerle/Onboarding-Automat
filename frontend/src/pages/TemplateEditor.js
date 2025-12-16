@@ -69,7 +69,7 @@ export default function TemplateEditor() {
           id: `new-${Date.now()}`,
           title: "",
           description: "",
-          category: "IT",
+          category: categories[0]?.name || "IT",
           owner_role: ownerRoles[0]?.name || "IT",
           offset_days: 0,
           evidence_required: false,
