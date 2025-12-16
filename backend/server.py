@@ -631,14 +631,14 @@ async def get_organization(org_id: str, current_user: dict = Depends(get_current
     return OrganizationResponse(**org)
 
 @api_router.get("/admin/licenses")
-async def get_all_licenses(admin: dict = Depends(require_admin)):
-    """Get all license keys - Admin only"""
+async def get_all_licenses(admin: dict = Depends(require_super_admin)):
+    """Get all license keys - Super-Admin only"""
     licenses = await db.license_keys.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return licenses
 
 @api_router.get("/admin/organizations")
-async def get_all_organizations(admin: dict = Depends(require_admin)):
-    """Get all organizations with stats - Admin only"""
+async def get_all_organizations(admin: dict = Depends(require_super_admin)):
+    """Get all organizations with stats - Super-Admin only"""
     orgs = await db.organizations.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     
     # Add user count and case count for each org
