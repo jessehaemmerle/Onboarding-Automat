@@ -164,10 +164,47 @@ async def create_indexes():
     except Exception as e:
         logger.warning(f"Index creation: {e} (may already exist)")
 
+async def ensure_super_admin():
+    """Create default Super-Admin if none exists - for deployment"""
+    try:
+        # Check if any super admin exists
+        existing_super_admin = await db.users.find_one({"is_super_admin": True}, {"_id": 0, "email": 1})
+        
+        if existing_super_admin:
+            logger.info(f"✅ Super-Admin exists: {existing_super_admin.get('email')}")
+            return
+        
+        # Get Super-Admin credentials from environment
+        admin_email = os.environ.get('SUPER_ADMIN_EMAIL', 'jesse@haemmerle.at')
+        admin_password = os.environ.get('SUPER_ADMIN_PASSWORD', 'Admin2024!')
+        admin_name = os.environ.get('SUPER_ADMIN_NAME', 'Jesse (Super Admin)')
+        
+        # Create Super-Admin
+        super_admin = {
+            "id": str(uuid.uuid4()),
+            "email": admin_email,
+            "name": admin_name,
+            "hashed_password": pwd_context.hash(admin_password),
+            "password_hash": pwd_context.hash(admin_password),
+            "role": "admin",
+            "is_super_admin": True,
+            "organization_id": None,
+            "status": "active",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.users.insert_one(super_admin)
+        logger.info(f"✅ Super-Admin created: {admin_email}")
+        logger.info(f"   ⚠️  WICHTIG: Ändern Sie das Passwort nach dem ersten Login!")
+        
+    except Exception as e:
+        logger.error(f"Error creating Super-Admin: {e}")
+
 # Start background task on app startup
 @app.on_event("startup")
 async def start_background_tasks():
     await create_indexes()
+    await ensure_super_admin()
     asyncio.create_task(data_retention_cleanup())
     logger.info("✅ Application startup complete - indexes created, data retention scheduled")
 
