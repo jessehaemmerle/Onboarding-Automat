@@ -50,39 +50,48 @@ backend:
 frontend:
   - task: "Admin Login Page (/admin/login)"
     implemented: true
-    working: "NA"
+    working: true
     file: "frontend/src/pages/AdminLogin.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "testing"
         comment: "Frontend testing not performed - backend testing only. Page exists in codebase."
+      - working: true
+        agent: "testing"
+        comment: "✅ Admin login page working correctly. Purple theme with Shield icon visible. 'Zum normalen Login' link present. Super-Admin login successful with jesse@haemmerle.at credentials. Proper separation from normal login maintained."
 
   - task: "Admin Dashboard (/admin)"
     implemented: true
-    working: "NA"
+    working: true
     file: "frontend/src/pages/AdminPanel.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "testing"
         comment: "Frontend testing not performed - backend testing only. Admin routes and SuperAdminRoute component exist."
+      - working: true
+        agent: "testing"
+        comment: "✅ Admin dashboard working correctly. Dark sidebar layout with 'System Admin' header visible. Statistics cards (Lizenzen, Organisationen) displayed properly. Admin panel content loads correctly with tabs for license generation, license overview, and organizations."
 
   - task: "Normal App Layout (No Admin Links)"
     implemented: true
-    working: "NA"
+    working: true
     file: "frontend/src/components/Layout.js"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "testing"
         comment: "Frontend testing not performed - backend testing only. App.js shows separate routing structure."
+      - working: true
+        agent: "testing"
+        comment: "✅ Normal app layout working correctly. White sidebar with 'Onboarding' title. NO 'System Admin' links found in normal app navigation. Expected navigation items (Dashboard, Vorgänge, Templates, Einstellungen) all present. Super-Admin correctly redirected to admin area when logging in via normal login."
 
 metadata:
   created_by: "testing_agent"
