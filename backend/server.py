@@ -774,7 +774,22 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 @api_router.get("/users", response_model=List[UserResponse])
 async def get_users(current_user: dict = Depends(get_current_user)):
     await log_audit(user=current_user, action="access", resource_type="user", details="Benutzerliste abgerufen")
-    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0, "hashed_password": 0}).to_list(1000)
+    
+    # Fix missing organization info for each user
+    for user in users:
+        if not user.get("organization_id"):
+            user["organization_id"] = ""
+            user["organization_name"] = "Super Admin" if user.get("is_super_admin") else "Unknown"
+        elif not user.get("organization_name"):
+            # Fetch organization name if missing
+            org = await db.organizations.find_one({"id": user["organization_id"]}, {"_id": 0, "name": 1})
+            user["organization_name"] = org["name"] if org else "Unknown"
+        
+        # Ensure is_super_admin field exists
+        if "is_super_admin" not in user:
+            user["is_super_admin"] = False
+    
     return [UserResponse(**u) for u in users]
 
 @api_router.patch("/users/{user_id}")
