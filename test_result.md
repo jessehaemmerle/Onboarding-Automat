@@ -143,15 +143,18 @@ metadata:
 
   - task: "Categories CRUD API"
     implemented: true
-    working: needs_testing
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: needs_testing
         agent: "main"
         comment: "NEW: Added CRUD endpoints for categories (GET/POST/PUT/DELETE /api/categories). Categories are organization-scoped like owner_roles. Default categories created on organization registration."
+      - working: true
+        agent: "testing"
+        comment: "✅ CATEGORIES CRUD API TESTING COMPLETED SUCCESSFULLY (100% success rate - 7/7 tests passed): Tested with organization admin credentials admin@testfirma.de / Test123!. 1) GET /api/categories - List organization categories (✅ found 5 default categories: IT & Technik, Admin, Manager, HR, Security), 2) POST /api/categories - Create new category (✅ created category with ID and proper name/color), 3) GET /api/categories - Verify new category in list (✅ category appears in list, count increased), 4) PUT /api/categories/{id} - Update category (✅ name and color updated successfully), 5) DELETE /api/categories/{id} - Delete category (✅ category deleted successfully), 6) GET /api/categories - Verify deletion (✅ category removed from list, count restored), 7) Organization scoping verified (✅ categories are organization-specific). All CRUD operations working perfectly with proper admin authentication and organization isolation."
 
   - task: "Categories Management UI"
     implemented: true
