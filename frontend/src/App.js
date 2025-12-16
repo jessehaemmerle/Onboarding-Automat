@@ -14,6 +14,7 @@ import TemplateEditor from "./pages/TemplateEditor";
 import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
 import PrivacyCenter from "./pages/PrivacyCenter";
+import OrgUserManagement from "./pages/OrgUserManagement";
 import AdminPanel from "./pages/AdminPanel";
 import AdminLogin from "./pages/AdminLogin";
 import AdminUsers from "./pages/AdminUsers";
@@ -69,6 +70,7 @@ function App() {
             <Route path="templates/:id" element={<TemplateEditor />} />
             <Route path="templates/new" element={<TemplateEditor />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="user-management" element={<OrgUserManagement />} />
             <Route path="audit-log" element={<AuditLog />} />
             <Route path="privacy" element={<PrivacyCenter />} />
           </Route>
