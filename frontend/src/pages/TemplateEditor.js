@@ -272,8 +272,8 @@ export default function TemplateEditor() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {CATEGORIES.map(cat => (
-                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          {categories.map(cat => (
+                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
