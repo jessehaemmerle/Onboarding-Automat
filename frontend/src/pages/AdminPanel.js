@@ -17,7 +17,7 @@ import { useNavigate } from "react-router-dom";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function AdminPanel() {
-  const { user, isAdmin } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [licenses, setLicenses] = useState([]);
@@ -32,13 +32,13 @@ export default function AdminPanel() {
   });
 
   useEffect(() => {
-    if (!isAdmin) {
-      toast.error("Keine Berechtigung");
-      navigate("/");
+    if (!isSuperAdmin) {
+      toast.error("Keine Berechtigung - Nur für Super-Administratoren");
+      navigate("/admin/login");
       return;
     }
     fetchData();
-  }, [isAdmin, navigate]);
+  }, [isSuperAdmin, navigate]);
 
   const fetchData = async () => {
     try {
@@ -113,7 +113,7 @@ export default function AdminPanel() {
     });
   };
 
-  if (!isAdmin) {
+  if (!isSuperAdmin) {
     return null;
   }
 
