@@ -669,6 +669,16 @@ async def register_organization(data: OrganizationCreate):
     ]
     await db.owner_roles.insert_many(default_roles)
     
+    # Create default categories for the organization
+    default_categories = [
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "IT", "color": "#3b82f6"},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Admin", "color": "#8b5cf6"},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Manager", "color": "#10b981"},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "HR", "color": "#f59e0b"},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Security", "color": "#ef4444"},
+    ]
+    await db.categories.insert_many(default_categories)
+    
     logger.info(f"New organization registered: {data.name} (ID: {org_id})")
     
     # Generate token
