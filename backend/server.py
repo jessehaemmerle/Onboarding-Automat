@@ -259,8 +259,8 @@ class UserLogin(BaseModel):
 
 class UserResponse(UserBase):
     id: str
-    organization_id: str
-    organization_name: str
+    organization_id: Optional[str] = None
+    organization_name: Optional[str] = None
     is_super_admin: bool = False
     created_at: str
 
