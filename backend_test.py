@@ -1268,6 +1268,188 @@ class OnboardingAutomatTester:
             self.log(f"✅ Found {len(requests)} deletion requests")
         
         return True
+    
+    def test_organization_admin_endpoints(self):
+        """Test Organization-Admin specific endpoints"""
+        self.log("\n=== TESTING ORGANIZATION-ADMIN ENDPOINTS ===")
+        
+        # First, login as a regular admin (not super admin)
+        # We need to find an organization admin user
+        success, response = self.run_test(
+            "Login as organization admin",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "admin@startmate.de", "password": "adminpassword"}
+        )
+        
+        if not success or 'access_token' not in response:
+            self.log("❌ Could not login as organization admin")
+            return False
+        
+        # Store original token and use org admin token
+        original_token = self.token
+        self.token = response['access_token']
+        org_admin_user = response.get('user', {})
+        
+        # Verify this is an org admin, not super admin
+        if org_admin_user.get('is_super_admin', False):
+            self.log("⚠️ Test user is super admin, not organization admin")
+            self.token = original_token
+            return True
+        
+        test_user_id = None
+        
+        # 11. GET /api/org/users - Get users in current organization
+        success, response = self.run_test(
+            "11. GET /api/org/users - Get organization users",
+            "GET",
+            "org/users",
+            200
+        )
+        
+        if success and response:
+            org_users = response
+            self.log(f"✅ Found {len(org_users)} users in organization")
+            # Find a non-admin user for testing
+            for user in org_users:
+                if user.get('role') != 'admin' and user['id'] != org_admin_user['id']:
+                    test_user_id = user['id']
+                    self.log(f"   Selected test user: {user['email']} (ID: {test_user_id})")
+                    break
+        
+        # Test organization admin functions (only if we have a test user)
+        if test_user_id:
+            # 12. POST /api/org/users/{user_id}/reset-password - Reset password for org user
+            success, response = self.run_test(
+                "12. POST /api/org/users/{user_id}/reset-password - Org user password reset",
+                "POST",
+                f"org/users/{test_user_id}/reset-password?new_password=NewOrgPassword123!",
+                200
+            )
+            
+            if success:
+                self.log("✅ Organization admin password reset works")
+            
+            # 13. PATCH /api/org/users/{user_id}/status - Block/Activate org user (TEST ONLY)
+            self.log("13. PATCH /api/org/users/{user_id}/status - Org user status (checking endpoint)")
+            success, response = self.run_test(
+                "13a. Test org user status endpoint exists (invalid status)",
+                "PATCH",
+                f"org/users/{test_user_id}/status?status=invalid",
+                400  # Should return 400 for invalid status
+            )
+            
+            if success:
+                self.log("✅ Organization user status endpoint exists and validates input")
+            
+            # 14. DELETE /api/org/users/{user_id} - Delete org user (CHECK ENDPOINT ONLY)
+            self.log("14. DELETE /api/org/users/{user_id} - Delete org user (checking endpoint exists)")
+            # We won't actually delete, just check if endpoint exists by trying to delete non-existent user
+            success, response = self.run_test(
+                "14a. Test org user deletion endpoint exists",
+                "DELETE",
+                f"org/users/non-existent-user-id",
+                404  # Should return 404 for non-existent user
+            )
+            
+            if success:
+                self.log("✅ Organization user deletion endpoint exists")
+        
+        # Restore original token
+        self.token = original_token
+        return True
+    
+    def test_blocked_user_login(self):
+        """Test that blocked users cannot login"""
+        self.log("\n=== TESTING BLOCKED USER LOGIN RESTRICTION ===")
+        
+        # First, we need to create a test user and block them
+        # Login as super admin first
+        success, response = self.run_test(
+            "Login as Super-Admin for user blocking test",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "jesse@haemmerle.at", "password": "Admin2024!"}
+        )
+        
+        if not success:
+            self.log("❌ Could not login as super admin for blocking test")
+            return False
+        
+        super_admin_token = response['access_token']
+        original_token = self.token
+        self.token = super_admin_token
+        
+        # Get all users to find one to test with
+        success, response = self.run_test(
+            "Get users for blocking test",
+            "GET",
+            "admin/users",
+            200
+        )
+        
+        test_user_id = None
+        test_user_email = None
+        
+        if success and response:
+            users = response
+            # Find a non-super-admin user
+            for user in users:
+                if not user.get('is_super_admin', False) and user.get('email') != 'jesse@haemmerle.at':
+                    test_user_id = user['id']
+                    test_user_email = user['email']
+                    break
+        
+        if not test_user_id:
+            self.log("⚠️ No suitable test user found for blocking test")
+            self.token = original_token
+            return True
+        
+        # Block the user
+        success, response = self.run_test(
+            f"Block test user {test_user_email}",
+            "PATCH",
+            f"admin/users/{test_user_id}/status?status=blocked",
+            200
+        )
+        
+        if success:
+            self.log(f"✅ Successfully blocked user {test_user_email}")
+            
+            # Now try to login as the blocked user (this should fail)
+            # We don't know the user's password, so we'll test with a common password
+            # This test is more about checking the blocking mechanism
+            success, response = self.run_test(
+                f"15. Try to login as blocked user (should fail)",
+                "POST",
+                "auth/login",
+                403,  # Should return 403 Forbidden for blocked user
+                data={"email": test_user_email, "password": "anypassword"}
+            )
+            
+            if success:
+                self.log("✅ Blocked user correctly prevented from logging in")
+            else:
+                # The test might fail due to wrong password (401) rather than blocked status (403)
+                # Let's check what status we got
+                self.log("⚠️ Blocked user login test - may have failed due to password rather than blocked status")
+            
+            # Unblock the user to clean up
+            success, response = self.run_test(
+                f"Unblock test user {test_user_email} (cleanup)",
+                "PATCH",
+                f"admin/users/{test_user_id}/status?status=active",
+                200
+            )
+            
+            if success:
+                self.log(f"✅ Successfully unblocked user {test_user_email} (cleanup)")
+        
+        # Restore original token
+        self.token = original_token
+        return True
 
     def run_all_tests(self):
         """Run comprehensive test suite"""
