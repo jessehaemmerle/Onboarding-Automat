@@ -181,7 +181,7 @@ metadata:
         comment: "NEW: Template editor now loads categories from API instead of using hardcoded CATEGORIES array. Category dropdown populated dynamically."
 
 test_plan:
-  current_focus: ["Categories CRUD API", "Categories Management UI", "Template Editor Dynamic Categories"]
+  current_focus: ["Categories Management UI", "Template Editor Dynamic Categories"]
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
