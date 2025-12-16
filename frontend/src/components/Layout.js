@@ -31,9 +31,8 @@ export default function Layout() {
     { to: "/settings", label: "Einstellungen", icon: Settings },
   ];
 
-  const adminNavItems = isAdmin ? [
-    { to: "/admin", label: "System Admin", icon: Shield },
-  ] : [];
+  // Admin-Navigation komplett entfernt - Admin-Bereich ist jetzt unter /admin/login erreichbar
+  const adminNavItems = [];
 
   return (
     <div className="min-h-screen bg-slate-50 flex">

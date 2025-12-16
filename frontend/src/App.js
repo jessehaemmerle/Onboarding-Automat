@@ -15,7 +15,9 @@ import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
 import PrivacyCenter from "./pages/PrivacyCenter";
 import AdminPanel from "./pages/AdminPanel";
+import AdminLogin from "./pages/AdminLogin";
 import Layout from "./components/Layout";
+import AdminLayout from "./components/AdminLayout";
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -24,13 +26,32 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Route für Super-Admin-Bereich
+const SuperAdminRoute = ({ children }) => {
+  const { user, loading, isSuperAdmin } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-900"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div></div>;
+  if (!user) return <Navigate to="/admin/login" />;
+  if (!isSuperAdmin) return <Navigate to="/admin/login" />;
+  return children;
+};
+
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register-organization" element={<RegisterOrganization />} />
+          
+          {/* Admin Routes - Separate vom Rest der Anwendung */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin" element={<SuperAdminRoute><AdminLayout /></SuperAdminRoute>}>
+            <Route index element={<AdminPanel />} />
+            <Route path="dashboard" element={<AdminPanel />} />
+          </Route>
+          
+          {/* Main App Routes */}
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="cases" element={<Cases />} />
@@ -44,7 +65,6 @@ function App() {
             <Route path="settings" element={<Settings />} />
             <Route path="audit-log" element={<AuditLog />} />
             <Route path="privacy" element={<PrivacyCenter />} />
-            <Route path="admin" element={<AdminPanel />} />
           </Route>
         </Routes>
         <Toaster position="top-right" richColors />
