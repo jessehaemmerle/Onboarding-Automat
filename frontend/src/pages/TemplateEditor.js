@@ -13,8 +13,6 @@ import { ArrowLeft, Plus, Trash2, GripVertical, Save, Loader2 } from "lucide-rea
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const CATEGORIES = ["IT", "Admin", "Manager", "HR", "Security"];
-
 export default function TemplateEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -22,6 +20,7 @@ export default function TemplateEditor() {
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [ownerRoles, setOwnerRoles] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [template, setTemplate] = useState({
     name: "",
     description: "",
@@ -30,16 +29,20 @@ export default function TemplateEditor() {
   });
 
   useEffect(() => {
-    fetchOwnerRoles();
+    fetchOwnerRolesAndCategories();
     if (!isNew) {
       fetchTemplate();
     }
   }, [id]);
 
-  const fetchOwnerRoles = async () => {
+  const fetchOwnerRolesAndCategories = async () => {
     try {
-      const res = await axios.get(`${API}/owner-roles`);
-      setOwnerRoles(res.data);
+      const [rolesRes, categoriesRes] = await Promise.all([
+        axios.get(`${API}/owner-roles`),
+        axios.get(`${API}/categories`)
+      ]);
+      setOwnerRoles(rolesRes.data);
+      setCategories(categoriesRes.data);
     } catch (err) {
       console.error(err);
     }
