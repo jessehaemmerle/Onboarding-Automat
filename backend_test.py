@@ -118,13 +118,13 @@ class OnboardingAutomatTester:
         """Test Super-Admin authentication and access"""
         self.log("\n=== TESTING SUPER-ADMIN AUTHENTICATION ===")
         
-        # Test Super-Admin login
+        # Test Super-Admin login with correct credentials
         success, response = self.run_test(
             "Super-Admin login",
             "POST",
             "auth/login",
             200,
-            data={"email": "jesse@haemmerle.at", "password": "test123456"}
+            data={"email": "jesse@haemmerle.at", "password": "Admin2024!"}
         )
         
         if success and 'access_token' in response:
@@ -159,8 +159,8 @@ class OnboardingAutomatTester:
                     self.log(f"❌ /auth/me failed - is_super_admin: {is_super_admin_me}")
                     return False
             
-            # Test admin endpoints access
-            success = self.test_admin_endpoints_access()
+            # Test all new admin endpoints
+            success = self.test_new_admin_endpoints()
             
             # Restore original token
             self.token = original_token
