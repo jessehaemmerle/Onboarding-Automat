@@ -1577,7 +1577,7 @@ class OnboardingAutomatTester:
             "POST",
             "auth/login",
             200,
-            data={"email": "jesse@haemmerle.at", "password": "Admin2024!"}
+            data={"email": "jesse@haemmerle.at", "password": "O!@Pr92HWrWYVeFJTp2@VNkV"}
         )
         
         if not success:
