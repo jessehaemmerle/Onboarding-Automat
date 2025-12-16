@@ -655,6 +655,441 @@ async def get_all_organizations(admin: dict = Depends(require_super_admin)):
     
     return orgs
 
+# ============ SUPER-ADMIN FUNCTIONS ============
+
+@api_router.get("/admin/users")
+async def get_all_users(admin: dict = Depends(require_super_admin)):
+    """Get all users across all organizations - Super-Admin only"""
+    users = await db.users.find({}, {"_id": 0, "hashed_password": 0, "password_hash": 0}).sort("created_at", -1).to_list(10000)
+    
+    # Enrich with organization names
+    org_cache = {}
+    for user in users:
+        org_id = user.get("organization_id")
+        if org_id and org_id not in org_cache:
+            org = await db.organizations.find_one({"id": org_id}, {"_id": 0, "name": 1})
+            org_cache[org_id] = org["name"] if org else "Unknown"
+        user["organization_name"] = org_cache.get(org_id, "Super Admin" if user.get("is_super_admin") else "Unknown")
+        user["is_super_admin"] = user.get("is_super_admin", False)
+    
+    return users
+
+@api_router.patch("/admin/users/{user_id}/status")
+async def update_user_status(user_id: str, status: str, admin: dict = Depends(require_super_admin)):
+    """Block/Unblock a user - Super-Admin only"""
+    if status not in ["active", "blocked"]:
+        raise HTTPException(status_code=400, detail="Status muss 'active' oder 'blocked' sein")
+    
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    
+    if user.get("is_super_admin"):
+        raise HTTPException(status_code=403, detail="Super-Admin kann nicht gesperrt werden")
+    
+    old_status = user.get("status", "active")
+    await db.users.update_one({"id": user_id}, {"$set": {"status": status}})
+    
+    await log_audit(
+        user=admin,
+        action="update",
+        resource_type="user",
+        resource_id=user_id,
+        resource_name=user.get("email"),
+        details=f"Benutzer-Status geändert: {old_status} -> {status}",
+        old_value=old_status,
+        new_value=status
+    )
+    
+    return {"message": f"Benutzer-Status auf '{status}' gesetzt", "user_id": user_id}
+
+@api_router.post("/admin/users/{user_id}/reset-password")
+async def admin_reset_password(user_id: str, new_password: str, admin: dict = Depends(require_super_admin)):
+    """Reset password for any user - Super-Admin only"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="Passwort muss mindestens 8 Zeichen haben")
+    
+    hashed = get_password_hash(new_password)
+    await db.users.update_one({"id": user_id}, {"$set": {"hashed_password": hashed, "password_hash": hashed}})
+    
+    await log_audit(
+        user=admin,
+        action="update",
+        resource_type="user",
+        resource_id=user_id,
+        resource_name=user.get("email"),
+        details="Passwort durch Super-Admin zurückgesetzt"
+    )
+    
+    return {"message": "Passwort erfolgreich zurückgesetzt", "user_id": user_id}
+
+@api_router.patch("/admin/organizations/{org_id}/status")
+async def update_organization_status(org_id: str, status: str, admin: dict = Depends(require_super_admin)):
+    """Activate/Deactivate an organization - Super-Admin only"""
+    if status not in ["active", "inactive", "suspended"]:
+        raise HTTPException(status_code=400, detail="Status muss 'active', 'inactive' oder 'suspended' sein")
+    
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organisation nicht gefunden")
+    
+    old_status = org.get("status", "active")
+    await db.organizations.update_one({"id": org_id}, {"$set": {"status": status}})
+    
+    await log_audit(
+        user=admin,
+        action="update",
+        resource_type="organization",
+        resource_id=org_id,
+        resource_name=org.get("name"),
+        details=f"Organisations-Status geändert: {old_status} -> {status}",
+        old_value=old_status,
+        new_value=status
+    )
+    
+    return {"message": f"Organisations-Status auf '{status}' gesetzt", "org_id": org_id}
+
+@api_router.patch("/admin/organizations/{org_id}/user-limit")
+async def update_organization_user_limit(org_id: str, user_limit: int, admin: dict = Depends(require_super_admin)):
+    """Change user limit for an organization - Super-Admin only"""
+    if user_limit < 1:
+        raise HTTPException(status_code=400, detail="Benutzer-Limit muss mindestens 1 sein")
+    
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organisation nicht gefunden")
+    
+    old_limit = org.get("user_limit", 10)
+    await db.organizations.update_one({"id": org_id}, {"$set": {"user_limit": user_limit}})
+    
+    # Update license key as well
+    await db.license_keys.update_one({"organization_id": org_id}, {"$set": {"user_limit": user_limit}})
+    
+    await log_audit(
+        user=admin,
+        action="update",
+        resource_type="organization",
+        resource_id=org_id,
+        resource_name=org.get("name"),
+        details=f"Benutzer-Limit geändert: {old_limit} -> {user_limit}",
+        old_value=str(old_limit),
+        new_value=str(user_limit)
+    )
+    
+    return {"message": f"Benutzer-Limit auf {user_limit} gesetzt", "org_id": org_id}
+
+@api_router.delete("/admin/organizations/{org_id}")
+async def delete_organization(org_id: str, confirm: bool = False, admin: dict = Depends(require_super_admin)):
+    """Delete an organization and all its data - Super-Admin only"""
+    if not confirm:
+        raise HTTPException(status_code=400, detail="Bestätigung erforderlich: confirm=true")
+    
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organisation nicht gefunden")
+    
+    # Delete all organization data
+    await db.users.delete_many({"organization_id": org_id})
+    await db.cases.delete_many({"organization_id": org_id})
+    await db.templates.delete_many({"organization_id": org_id})
+    await db.owner_roles.delete_many({"organization_id": org_id})
+    await db.audit_logs.delete_many({"organization_id": org_id})
+    await db.license_keys.update_one({"organization_id": org_id}, {"$set": {"status": "revoked", "organization_id": None}})
+    await db.organizations.delete_one({"id": org_id})
+    
+    await log_audit(
+        user=admin,
+        action="delete",
+        resource_type="organization",
+        resource_id=org_id,
+        resource_name=org.get("name"),
+        details="Organisation und alle zugehörigen Daten gelöscht"
+    )
+    
+    return {"message": f"Organisation '{org.get('name')}' erfolgreich gelöscht", "org_id": org_id}
+
+@api_router.get("/admin/audit-logs")
+async def get_system_audit_logs(
+    limit: int = 100,
+    offset: int = 0,
+    action: Optional[str] = None,
+    resource_type: Optional[str] = None,
+    admin: dict = Depends(require_super_admin)
+):
+    """Get system-wide audit logs - Super-Admin only"""
+    query = {}
+    if action:
+        query["action"] = action
+    if resource_type:
+        query["resource_type"] = resource_type
+    
+    logs = await db.audit_logs.find(query, {"_id": 0}).sort("timestamp", -1).skip(offset).limit(limit).to_list(limit)
+    total = await db.audit_logs.count_documents(query)
+    
+    return {"logs": logs, "total": total, "limit": limit, "offset": offset}
+
+@api_router.get("/admin/system-stats")
+async def get_system_stats(admin: dict = Depends(require_super_admin)):
+    """Get system-wide statistics - Super-Admin only"""
+    now = datetime.now(timezone.utc)
+    last_30_days = (now - timedelta(days=30)).isoformat()
+    last_7_days = (now - timedelta(days=7)).isoformat()
+    
+    # Total counts
+    total_orgs = await db.organizations.count_documents({})
+    total_users = await db.users.count_documents({})
+    total_cases = await db.cases.count_documents({})
+    total_templates = await db.templates.count_documents({})
+    
+    # Active counts
+    active_orgs = await db.organizations.count_documents({"status": "active"})
+    active_users = await db.users.count_documents({"status": {"$ne": "blocked"}})
+    active_cases = await db.cases.count_documents({"status": "active"})
+    
+    # License stats
+    total_licenses = await db.license_keys.count_documents({})
+    unused_licenses = await db.license_keys.count_documents({"status": "unused"})
+    active_licenses = await db.license_keys.count_documents({"status": "active"})
+    
+    # Recent activity
+    new_orgs_30d = await db.organizations.count_documents({"created_at": {"$gte": last_30_days}})
+    new_users_30d = await db.users.count_documents({"created_at": {"$gte": last_30_days}})
+    new_cases_7d = await db.cases.count_documents({"created_at": {"$gte": last_7_days}})
+    
+    # Case type distribution
+    onboarding_count = await db.cases.count_documents({"case_type": "onboarding"})
+    offboarding_count = await db.cases.count_documents({"case_type": "offboarding"})
+    rolechange_count = await db.cases.count_documents({"case_type": "rolechange"})
+    
+    return {
+        "totals": {
+            "organizations": total_orgs,
+            "users": total_users,
+            "cases": total_cases,
+            "templates": total_templates
+        },
+        "active": {
+            "organizations": active_orgs,
+            "users": active_users,
+            "cases": active_cases
+        },
+        "licenses": {
+            "total": total_licenses,
+            "unused": unused_licenses,
+            "active": active_licenses
+        },
+        "recent": {
+            "new_orgs_30d": new_orgs_30d,
+            "new_users_30d": new_users_30d,
+            "new_cases_7d": new_cases_7d
+        },
+        "case_types": {
+            "onboarding": onboarding_count,
+            "offboarding": offboarding_count,
+            "rolechange": rolechange_count
+        },
+        "generated_at": now.isoformat()
+    }
+
+@api_router.patch("/admin/licenses/{license_id}/revoke")
+async def revoke_license(license_id: str, admin: dict = Depends(require_super_admin)):
+    """Revoke a license key - Super-Admin only"""
+    license_key = await db.license_keys.find_one({"id": license_id}, {"_id": 0})
+    if not license_key:
+        raise HTTPException(status_code=404, detail="Lizenz nicht gefunden")
+    
+    if license_key.get("status") == "revoked":
+        raise HTTPException(status_code=400, detail="Lizenz ist bereits widerrufen")
+    
+    old_status = license_key.get("status")
+    await db.license_keys.update_one({"id": license_id}, {"$set": {"status": "revoked", "revoked_at": datetime.now(timezone.utc).isoformat()}})
+    
+    # If license was active, also suspend the organization
+    if license_key.get("organization_id"):
+        await db.organizations.update_one(
+            {"id": license_key["organization_id"]},
+            {"$set": {"status": "suspended"}}
+        )
+    
+    await log_audit(
+        user=admin,
+        action="update",
+        resource_type="license",
+        resource_id=license_id,
+        resource_name=license_key.get("key"),
+        details=f"Lizenz widerrufen (Status: {old_status} -> revoked)"
+    )
+    
+    return {"message": "Lizenz erfolgreich widerrufen", "license_id": license_id}
+
+@api_router.patch("/admin/licenses/{license_id}/expiry")
+async def set_license_expiry(license_id: str, expiry_date: str, admin: dict = Depends(require_super_admin)):
+    """Set expiry date for a license - Super-Admin only"""
+    license_key = await db.license_keys.find_one({"id": license_id}, {"_id": 0})
+    if not license_key:
+        raise HTTPException(status_code=404, detail="Lizenz nicht gefunden")
+    
+    # Validate date format
+    try:
+        datetime.fromisoformat(expiry_date.replace('Z', '+00:00'))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Ungültiges Datumsformat. Verwenden Sie ISO 8601 (z.B. 2025-12-31)")
+    
+    await db.license_keys.update_one({"id": license_id}, {"$set": {"expiry_date": expiry_date}})
+    
+    await log_audit(
+        user=admin,
+        action="update",
+        resource_type="license",
+        resource_id=license_id,
+        resource_name=license_key.get("key"),
+        details=f"Lizenz-Ablaufdatum gesetzt: {expiry_date}"
+    )
+    
+    return {"message": f"Ablaufdatum auf {expiry_date} gesetzt", "license_id": license_id}
+
+# ============ ORGANIZATION ADMIN FUNCTIONS (for company admins) ============
+
+@api_router.get("/org/users")
+async def get_org_users(current_user: dict = Depends(require_admin)):
+    """Get all users in the current organization - Org Admin only"""
+    org_id = current_user.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=400, detail="Keine Organisation zugeordnet")
+    
+    users = await db.users.find(
+        {"organization_id": org_id},
+        {"_id": 0, "hashed_password": 0, "password_hash": 0}
+    ).sort("created_at", -1).to_list(1000)
+    
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0, "name": 1})
+    org_name = org["name"] if org else "Unknown"
+    
+    for user in users:
+        user["organization_name"] = org_name
+        user["is_super_admin"] = user.get("is_super_admin", False)
+    
+    return users
+
+@api_router.post("/org/users/{user_id}/reset-password")
+async def org_reset_user_password(user_id: str, new_password: str, current_user: dict = Depends(require_admin)):
+    """Reset password for a user in the same organization - Org Admin only"""
+    org_id = current_user.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=400, detail="Keine Organisation zugeordnet")
+    
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    
+    # Ensure user belongs to same organization
+    if user.get("organization_id") != org_id:
+        raise HTTPException(status_code=403, detail="Keine Berechtigung für diesen Benutzer")
+    
+    # Cannot reset own password through this endpoint
+    if user_id == current_user.get("id"):
+        raise HTTPException(status_code=400, detail="Eigenes Passwort über Profil-Einstellungen ändern")
+    
+    # Cannot reset admin password if not admin yourself
+    if user.get("role") == "admin" and current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Keine Berechtigung für Admin-Passwort")
+    
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="Passwort muss mindestens 8 Zeichen haben")
+    
+    hashed = get_password_hash(new_password)
+    await db.users.update_one({"id": user_id}, {"$set": {"hashed_password": hashed, "password_hash": hashed}})
+    
+    await log_audit(
+        user=current_user,
+        action="update",
+        resource_type="user",
+        resource_id=user_id,
+        resource_name=user.get("email"),
+        details="Passwort durch Organisations-Admin zurückgesetzt"
+    )
+    
+    return {"message": "Passwort erfolgreich zurückgesetzt", "user_id": user_id}
+
+@api_router.patch("/org/users/{user_id}/status")
+async def org_update_user_status(user_id: str, status: str, current_user: dict = Depends(require_admin)):
+    """Block/Unblock a user in the same organization - Org Admin only"""
+    if status not in ["active", "blocked"]:
+        raise HTTPException(status_code=400, detail="Status muss 'active' oder 'blocked' sein")
+    
+    org_id = current_user.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=400, detail="Keine Organisation zugeordnet")
+    
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    
+    if user.get("organization_id") != org_id:
+        raise HTTPException(status_code=403, detail="Keine Berechtigung für diesen Benutzer")
+    
+    if user_id == current_user.get("id"):
+        raise HTTPException(status_code=400, detail="Eigenen Status kann nicht geändert werden")
+    
+    if user.get("role") == "admin" and current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Keine Berechtigung für Admin-Status")
+    
+    old_status = user.get("status", "active")
+    await db.users.update_one({"id": user_id}, {"$set": {"status": status}})
+    
+    await log_audit(
+        user=current_user,
+        action="update",
+        resource_type="user",
+        resource_id=user_id,
+        resource_name=user.get("email"),
+        details=f"Benutzer-Status geändert: {old_status} -> {status}",
+        old_value=old_status,
+        new_value=status
+    )
+    
+    return {"message": f"Benutzer-Status auf '{status}' gesetzt", "user_id": user_id}
+
+@api_router.delete("/org/users/{user_id}")
+async def org_delete_user(user_id: str, current_user: dict = Depends(require_admin)):
+    """Delete a user from the organization - Org Admin only"""
+    org_id = current_user.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=400, detail="Keine Organisation zugeordnet")
+    
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    
+    if user.get("organization_id") != org_id:
+        raise HTTPException(status_code=403, detail="Keine Berechtigung für diesen Benutzer")
+    
+    if user_id == current_user.get("id"):
+        raise HTTPException(status_code=400, detail="Eigenen Account kann nicht gelöscht werden")
+    
+    if user.get("role") == "admin":
+        # Check if this is the last admin
+        admin_count = await db.users.count_documents({"organization_id": org_id, "role": "admin"})
+        if admin_count <= 1:
+            raise HTTPException(status_code=400, detail="Letzter Admin kann nicht gelöscht werden")
+    
+    await db.users.delete_one({"id": user_id})
+    
+    await log_audit(
+        user=current_user,
+        action="delete",
+        resource_type="user",
+        resource_id=user_id,
+        resource_name=user.get("email"),
+        details="Benutzer aus Organisation gelöscht"
+    )
+    
+    return {"message": f"Benutzer '{user.get('email')}' erfolgreich gelöscht", "user_id": user_id}
+
 # ============ AUTH ROUTES ============
 
 @api_router.post("/auth/register", response_model=TokenResponse)
