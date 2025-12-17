@@ -7,7 +7,8 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "../components/ui/dialog";
-import { Plus, Trash2, Edit, Save, Users, Building2, Loader2, Tags } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { Plus, Trash2, Edit, Save, Users, Building2, Loader2, Tags, Briefcase } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -26,18 +27,24 @@ export default function Settings() {
   const [settings, setSettings] = useState({ org_name: "", org_timezone: "Europe/Berlin", reminder_days_before: 3, reminder_days_after: 2 });
   const [ownerRoles, setOwnerRoles] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
   // Role dialog state
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
-  const [roleForm, setRoleForm] = useState({ name: "", emails: "" });
+  const [roleForm, setRoleForm] = useState({ name: "", emails: "", department_id: "" });
   
   // Category dialog state
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [categoryForm, setCategoryForm] = useState({ name: "", color: "#3b82f6" });
+  
+  // Department dialog state
+  const [showDepartmentDialog, setShowDepartmentDialog] = useState(false);
+  const [editingDepartment, setEditingDepartment] = useState(null);
+  const [departmentForm, setDepartmentForm] = useState({ name: "", color: "#3b82f6" });
 
   useEffect(() => {
     fetchData();
@@ -45,14 +52,16 @@ export default function Settings() {
 
   const fetchData = async () => {
     try {
-      const [settingsRes, rolesRes, categoriesRes] = await Promise.all([
+      const [settingsRes, rolesRes, categoriesRes, departmentsRes] = await Promise.all([
         axios.get(`${API}/settings`),
         axios.get(`${API}/owner-roles`),
         axios.get(`${API}/categories`),
+        axios.get(`${API}/departments`),
       ]);
       setSettings(settingsRes.data);
       setOwnerRoles(rolesRes.data);
       setCategories(categoriesRes.data);
+      setDepartments(departmentsRes.data);
     } catch (err) {
       toast.error("Fehler beim Laden der Einstellungen");
     } finally {
@@ -72,14 +81,58 @@ export default function Settings() {
     }
   };
 
+  // Department functions
+  const openDepartmentDialog = (dept = null) => {
+    if (dept) {
+      setEditingDepartment(dept);
+      setDepartmentForm({ name: dept.name, color: dept.color });
+    } else {
+      setEditingDepartment(null);
+      setDepartmentForm({ name: "", color: "#3b82f6" });
+    }
+    setShowDepartmentDialog(true);
+  };
+
+  const saveDepartment = async () => {
+    if (!departmentForm.name.trim()) {
+      toast.error("Bitte geben Sie einen Namen ein");
+      return;
+    }
+    
+    try {
+      if (editingDepartment) {
+        await axios.put(`${API}/departments/${editingDepartment.id}`, departmentForm);
+        toast.success("Abteilung aktualisiert");
+      } else {
+        await axios.post(`${API}/departments`, departmentForm);
+        toast.success("Abteilung erstellt");
+      }
+      setShowDepartmentDialog(false);
+      fetchData();
+    } catch (err) {
+      toast.error("Fehler beim Speichern");
+    }
+  };
+
+  const deleteDepartment = async (id) => {
+    if (!window.confirm("Abteilung wirklich löschen?")) return;
+    try {
+      await axios.delete(`${API}/departments/${id}`);
+      toast.success("Abteilung gelöscht");
+      fetchData();
+    } catch (err) {
+      toast.error("Fehler beim Löschen");
+    }
+  };
+
   // Owner Role functions
   const openRoleDialog = (role = null) => {
     if (role) {
       setEditingRole(role);
-      setRoleForm({ name: role.name, emails: role.emails.join(", ") });
+      setRoleForm({ name: role.name, emails: role.emails.join(", "), department_id: role.department_id || "" });
     } else {
       setEditingRole(null);
-      setRoleForm({ name: "", emails: "" });
+      setRoleForm({ name: "", emails: "", department_id: "" });
     }
     setShowRoleDialog(true);
   };
@@ -91,13 +144,18 @@ export default function Settings() {
     }
 
     const emails = roleForm.emails.split(",").map(e => e.trim()).filter(e => e);
+    const payload = { 
+      name: roleForm.name, 
+      emails,
+      department_id: roleForm.department_id || null
+    };
     
     try {
       if (editingRole) {
-        await axios.put(`${API}/owner-roles/${editingRole.id}`, { name: roleForm.name, emails });
+        await axios.put(`${API}/owner-roles/${editingRole.id}`, payload);
         toast.success("Rolle aktualisiert");
       } else {
-        await axios.post(`${API}/owner-roles`, { name: roleForm.name, emails });
+        await axios.post(`${API}/owner-roles`, payload);
         toast.success("Rolle erstellt");
       }
       setShowRoleDialog(false);
@@ -152,7 +210,7 @@ export default function Settings() {
   };
 
   const deleteCategory = async (id) => {
-    if (!window.confirm("Kategorie wirklich löschen? Bestehende Aufgaben behalten ihren Kategorie-Namen.")) return;
+    if (!window.confirm("Kategorie wirklich löschen?")) return;
     try {
       await axios.delete(`${API}/categories/${id}`);
       toast.success("Kategorie gelöscht");
@@ -160,6 +218,12 @@ export default function Settings() {
     } catch (err) {
       toast.error("Fehler beim Löschen");
     }
+  };
+
+  // Helper to get department name
+  const getDepartmentName = (deptId) => {
+    const dept = departments.find(d => d.id === deptId);
+    return dept?.name || null;
   };
 
   if (loading) {
@@ -241,6 +305,64 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      {/* Departments */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="w-5 h-5" /> Abteilungen
+            </CardTitle>
+            <CardDescription>Abteilungen für Benutzer und Task-Filterung</CardDescription>
+          </div>
+          <Button onClick={() => openDepartmentDialog()} variant="outline" size="sm" data-testid="add-department">
+            <Plus className="w-4 h-4 mr-2" /> Neue Abteilung
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {departments.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <Briefcase className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+              <p>Keine Abteilungen definiert</p>
+              <p className="text-sm mt-1">Erstellen Sie Abteilungen wie IT, HR, Management...</p>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {departments.map(dept => (
+                <div 
+                  key={dept.id} 
+                  className="flex items-center gap-2 px-3 py-2 border rounded-lg bg-slate-50 group"
+                  data-testid={`department-${dept.id}`}
+                >
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: dept.color }}
+                  />
+                  <span className="font-medium text-slate-900">{dept.name}</span>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 w-6 p-0"
+                      onClick={() => openDepartmentDialog(dept)} 
+                    >
+                      <Edit className="w-3 h-3" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 w-6 p-0 text-red-600 hover:text-red-700" 
+                      onClick={() => deleteDepartment(dept.id)} 
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Categories */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -280,7 +402,6 @@ export default function Settings() {
                       size="sm" 
                       className="h-6 w-6 p-0"
                       onClick={() => openCategoryDialog(cat)} 
-                      data-testid={`edit-category-${cat.id}`}
                     >
                       <Edit className="w-3 h-3" />
                     </Button>
@@ -289,7 +410,6 @@ export default function Settings() {
                       size="sm" 
                       className="h-6 w-6 p-0 text-red-600 hover:text-red-700" 
                       onClick={() => deleteCategory(cat.id)} 
-                      data-testid={`delete-category-${cat.id}`}
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>
@@ -308,7 +428,7 @@ export default function Settings() {
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" /> Owner-Rollen
             </CardTitle>
-            <CardDescription>Zuordnung von Verantwortlichkeiten zu E-Mail-Adressen</CardDescription>
+            <CardDescription>Zuordnung von Verantwortlichkeiten zu E-Mail-Adressen und Abteilungen</CardDescription>
           </div>
           <Button onClick={() => openRoleDialog()} variant="outline" size="sm" data-testid="add-role">
             <Plus className="w-4 h-4 mr-2" /> Neue Rolle
@@ -326,7 +446,15 @@ export default function Settings() {
               {ownerRoles.map(role => (
                 <div key={role.id} className="flex items-center justify-between p-4 border rounded-lg bg-slate-50" data-testid={`role-${role.id}`}>
                   <div>
-                    <h4 className="font-medium text-slate-900">{role.name}</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-slate-900">{role.name}</h4>
+                      {role.department_id && (
+                        <Badge variant="outline" className="text-xs">
+                          <Briefcase className="w-3 h-3 mr-1" />
+                          {getDepartmentName(role.department_id)}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {role.emails.length > 0 ? (
                         role.emails.map((email, i) => (
@@ -352,13 +480,60 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      {/* Department Dialog */}
+      <Dialog open={showDepartmentDialog} onOpenChange={setShowDepartmentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingDepartment ? "Abteilung bearbeiten" : "Neue Abteilung"}</DialogTitle>
+            <DialogDescription>
+              Definieren Sie eine Abteilung für Benutzer und Task-Filterung
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="department-name">Name *</Label>
+              <Input
+                id="department-name"
+                placeholder="z.B. IT, HR, Management"
+                value={departmentForm.name}
+                onChange={(e) => setDepartmentForm({ ...departmentForm, name: e.target.value })}
+                data-testid="department-name-input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Farbe</Label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_OPTIONS.map(color => (
+                  <button
+                    key={color.value}
+                    type="button"
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${
+                      departmentForm.color === color.value 
+                        ? "border-slate-900 scale-110" 
+                        : "border-transparent hover:scale-105"
+                    }`}
+                    style={{ backgroundColor: color.value }}
+                    onClick={() => setDepartmentForm({ ...departmentForm, color: color.value })}
+                    title={color.label}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDepartmentDialog(false)}>Abbrechen</Button>
+            <Button onClick={saveDepartment} className="btn-primary" data-testid="save-department">Speichern</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Role Dialog */}
       <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingRole ? "Rolle bearbeiten" : "Neue Rolle"}</DialogTitle>
             <DialogDescription>
-              Definieren Sie eine Verantwortlichkeit und weisen Sie E-Mail-Adressen zu
+              Definieren Sie eine Verantwortlichkeit und weisen Sie E-Mail-Adressen und Abteilung zu
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -371,6 +546,29 @@ export default function Settings() {
                 onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })}
                 data-testid="role-name-input"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role-department">Abteilung</Label>
+              <Select 
+                value={roleForm.department_id || "none"} 
+                onValueChange={(v) => setRoleForm({ ...roleForm, department_id: v === "none" ? "" : v })}
+              >
+                <SelectTrigger data-testid="role-department-select">
+                  <SelectValue placeholder="Abteilung wählen (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Keine Abteilung</SelectItem>
+                  {departments.map(dept => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: dept.color }} />
+                        {dept.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">Tasks mit dieser Rolle werden Benutzern der gewählten Abteilung angezeigt</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="role-emails">E-Mail-Adressen (kommagetrennt)</Label>
@@ -426,7 +624,6 @@ export default function Settings() {
                     style={{ backgroundColor: color.value }}
                     onClick={() => setCategoryForm({ ...categoryForm, color: color.value })}
                     title={color.label}
-                    data-testid={`color-${color.value}`}
                   />
                 ))}
               </div>
