@@ -128,6 +128,7 @@ export default function TemplateEditor() {
           offset_days: parseInt(t.offset_days) || 0,
           evidence_required: t.evidence_required || false,
           sort_order: i,
+          depends_on: t.depends_on || null,
         })),
       };
 
