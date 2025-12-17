@@ -316,8 +316,7 @@ test_plan:
   test_priority: "high_first"
 
 test_plan:
-  current_focus:
-    - "GDPR/DSGVO Compliance Features"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
