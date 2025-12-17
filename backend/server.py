@@ -1189,6 +1189,41 @@ async def update_org_user_role(user_id: str, role: str, current_user: dict = Dep
     
     return {"message": f"Benutzer-Rolle auf '{role}' geändert", "user_id": user_id}
 
+@api_router.patch("/org/users/{user_id}/department")
+async def change_user_department(user_id: str, department_id: Optional[str] = None, current_user: dict = Depends(require_admin)):
+    """Change user's department - Org Admin only"""
+    org_id = current_user.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=400, detail="Keine Organisation zugeordnet")
+    
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    if user.get("organization_id") != org_id:
+        raise HTTPException(status_code=403, detail="Benutzer gehört nicht zu Ihrer Organisation")
+    
+    # Validate department exists if provided
+    if department_id:
+        dept = await db.departments.find_one({"id": department_id, "organization_id": org_id}, {"_id": 0})
+        if not dept:
+            raise HTTPException(status_code=404, detail="Abteilung nicht gefunden")
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"department_id": department_id}}
+    )
+    
+    await log_audit(
+        user=current_user,
+        action="update",
+        resource_type="user",
+        resource_id=user_id,
+        resource_name=user.get("email"),
+        details=f"Abteilung geändert: {department_id or 'Keine'}"
+    )
+    
+    return {"message": "Abteilung erfolgreich geändert", "user_id": user_id}
+
 @api_router.get("/org/users")
 async def get_org_users(current_user: dict = Depends(require_admin)):
     """Get all users in the current organization - Org Admin only"""
