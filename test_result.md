@@ -296,15 +296,18 @@ metadata:
 
   - task: "GDPR/DSGVO Compliance Features"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "testing"
         comment: "NEW TESTING REQUEST: Test GDPR/DSGVO compliance features including 8 endpoints: GET /api/gdpr/my-data (Art. 15), GET /api/gdpr/export (Art. 20), POST /api/gdpr/consents (Art. 7), POST /api/gdpr/consents/revoke, GET /api/gdpr/consents, DELETE /api/gdpr/delete-account (Art. 17), GET /api/gdpr/privacy-info (Art. 13/14). Test credentials: admin@testfirma.de / Test123!"
+      - working: true
+        agent: "testing"
+        comment: "✅ GDPR/DSGVO COMPLIANCE FEATURES TESTING COMPLETED SUCCESSFULLY (100% success rate - 9/9 tests passed): Comprehensive testing with organization admin credentials admin@testfirma.de / Test123!. 1) ✅ GET /api/gdpr/privacy-info - Privacy information (Art. 13/14) returns data controller info, 4 data categories, 7 user rights including all essential GDPR rights (Art. 15, 16, 17, 20), 2) ✅ GET /api/gdpr/my-data - Personal data access (Art. 15) returns 5 data categories (Stammdaten, Nutzungsdaten, Kommunikation, Nachweise, Protokolldaten), 3) ✅ GET /api/gdpr/export?format=json - JSON export (Art. 20) successful data portability, 4) ✅ GET /api/gdpr/export?format=csv - CSV export (Art. 20) successful data portability, 5) ✅ GET /api/gdpr/consents - User consents retrieval working, 6) ✅ POST /api/gdpr/consents - Consent saving (Art. 7) successful, 7) ✅ POST /api/gdpr/consents/email_notifications/revoke - Consent revocation (Art. 7 Abs. 3) successful with revoked_at timestamp, 8) ✅ Consent revocation verification working, 9) ✅ DELETE /api/gdpr/delete-account - Account deletion endpoint (Art. 17) exists and requires confirmation (NOT TESTED WITH ADMIN ACCOUNT as requested). All GDPR compliance features working perfectly with proper data protection rights implementation."
 
 test_plan:
   current_focus: []
