@@ -1239,9 +1239,14 @@ async def get_org_users(current_user: dict = Depends(require_admin)):
     org = await db.organizations.find_one({"id": org_id}, {"_id": 0, "name": 1})
     org_name = org["name"] if org else "Unknown"
     
+    # Get all departments for this org to map IDs to names
+    departments = await db.departments.find({"organization_id": org_id}, {"_id": 0}).to_list(100)
+    dept_map = {d["id"]: d["name"] for d in departments}
+    
     for user in users:
         user["organization_name"] = org_name
         user["is_super_admin"] = user.get("is_super_admin", False)
+        user["department_name"] = dept_map.get(user.get("department_id")) if user.get("department_id") else None
     
     return users
 
