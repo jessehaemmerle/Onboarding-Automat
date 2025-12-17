@@ -267,6 +267,7 @@ class UserBase(BaseModel):
     email: EmailStr
     name: str
     role: str = "owner"  # admin, manager, owner, readonly
+    department_id: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
@@ -282,6 +283,8 @@ class UserResponse(UserBase):
     organization_name: Optional[str] = None
     is_super_admin: bool = False
     created_at: str
+    department_id: Optional[str] = None
+    department_name: Optional[str] = None
 
 class TokenResponse(BaseModel):
     access_token: str
