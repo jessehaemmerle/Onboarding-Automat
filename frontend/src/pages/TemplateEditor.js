@@ -318,6 +318,28 @@ export default function TemplateEditor() {
                       />
                       <Label className="text-sm">Nachweis erforderlich</Label>
                     </div>
+                    <div className="space-y-2">
+                      <Label>Abhängig von</Label>
+                      <Select 
+                        value={task.depends_on || "none"} 
+                        onValueChange={(v) => updateTask(index, "depends_on", v === "none" ? null : v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Keine Abhängigkeit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Keine Abhängigkeit</SelectItem>
+                          {template.tasks
+                            .filter((t, i) => i !== index && t.id !== task.id)
+                            .map((t) => (
+                              <SelectItem key={t.id} value={t.id}>
+                                {t.title || `Aufgabe ${template.tasks.indexOf(t) + 1}`}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-slate-500">Task wird erst freigeschaltet wenn der Vorgänger abgeschlossen ist</p>
+                    </div>
                   </div>
 
                   <Button
