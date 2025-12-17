@@ -108,6 +108,13 @@ export default function Login() {
               </div>
             </CardContent>
           </Card>
+          
+          {/* DSGVO Links */}
+          <div className="text-center text-sm text-slate-500 space-x-4">
+            <a href="/datenschutz" className="hover:text-blue-600 hover:underline">Datenschutz</a>
+            <span>•</span>
+            <a href="/impressum" className="hover:text-blue-600 hover:underline">Impressum</a>
+          </div>
         </div>
       </div>
 
