@@ -486,6 +486,21 @@ export default function OrgUserManagement() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-department">Abteilung</Label>
+              <Select value={newUser.department_id || "none"} onValueChange={(v) => setNewUser({ ...newUser, department_id: v === "none" ? "" : v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Abteilung wählen (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Keine Abteilung</SelectItem>
+                  {departments.map(dept => (
+                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">Benutzer sehen nur Tasks ihrer Abteilung</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddUserDialog(false)}>
@@ -493,6 +508,42 @@ export default function OrgUserManagement() {
             </Button>
             <Button onClick={createUser}>
               Benutzer erstellen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Department Change Dialog */}
+      <Dialog open={showDepartmentDialog} onOpenChange={setShowDepartmentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Abteilung ändern</DialogTitle>
+            <DialogDescription>
+              Abteilung für {selectedUser?.name} ändern
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Select value={newDepartmentId || "none"} onValueChange={(v) => setNewDepartmentId(v === "none" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Abteilung wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Keine Abteilung</SelectItem>
+                {departments.map(dept => (
+                  <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-slate-500">
+              Benutzer in einer Abteilung sehen nur Tasks, deren Owner-Rolle derselben Abteilung zugeordnet ist.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDepartmentDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={updateDepartment}>
+              Abteilung ändern
             </Button>
           </DialogFooter>
         </DialogContent>
