@@ -46,6 +46,7 @@ export default function OrgUserManagement() {
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
   const [orgInfo, setOrgInfo] = useState(null);
+  const [departments, setDepartments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   
@@ -54,11 +55,13 @@ export default function OrgUserManagement() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   const [showRoleDialog, setShowRoleDialog] = useState(false);
+  const [showDepartmentDialog, setShowDepartmentDialog] = useState(false);
   
   // Form states
   const [newPassword, setNewPassword] = useState("");
-  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "user" });
+  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "user", department_id: "" });
   const [newRole, setNewRole] = useState("user");
+  const [newDepartmentId, setNewDepartmentId] = useState("");
 
   useEffect(() => {
     if (!isAdmin) {
