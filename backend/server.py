@@ -333,6 +333,7 @@ class TemplateTaskBase(BaseModel):
     offset_days: int = 0
     evidence_required: bool = False
     sort_order: int = 0
+    depends_on: Optional[str] = None  # ID of the task this depends on (within template)
 
 class TemplateBase(BaseModel):
     name: str
