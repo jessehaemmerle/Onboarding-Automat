@@ -188,51 +188,63 @@ metadata:
 
   - task: "Departments CRUD API"
     implemented: true
-    working: needs_testing
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: needs_testing
         agent: "main"
         comment: "NEW: Added CRUD endpoints for departments (GET/POST/PUT/DELETE /api/departments). Default departments created on org registration."
+      - working: true
+        agent: "testing"
+        comment: "✅ DEPARTMENTS CRUD API TESTING COMPLETED SUCCESSFULLY (100% success rate - 10/10 tests passed): Tested with organization admin credentials admin@testfirma.de / Test123!. 1) GET /api/departments - List organization departments (✅ found 3 default departments: IT, HR, Management), 2) POST /api/departments - Create new department (✅ created IT-Abteilung with proper name/color), 3) GET /api/departments - Verify new department in list (✅ department appears in list, count increased), 4) PUT /api/departments/{id} - Update department (✅ name and color updated successfully), 5) DELETE /api/departments/{id} - Delete department (✅ department deleted successfully), 6) GET /api/departments - Verify deletion (✅ department removed from list, count restored), 7) Organization scoping verified (✅ departments are organization-specific), 8) Invalid department creation properly rejected (✅ missing name validation works), 9) Non-existent department update/delete properly rejected (✅ 404 responses). All CRUD operations working perfectly with proper admin authentication and organization isolation."
 
   - task: "Department Assignment for Users"
     implemented: true
-    working: needs_testing
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: needs_testing
         agent: "main"
         comment: "NEW: Users can be assigned to departments. PATCH /api/org/users/{user_id}/department endpoint added. User creation includes department_id field."
+      - working: true
+        agent: "testing"
+        comment: "✅ USER DEPARTMENT ASSIGNMENT TESTING COMPLETED SUCCESSFULLY (100% success rate - 6/6 tests passed): Tested with organization admin credentials admin@testfirma.de / Test123!. 1) POST /api/org/users - Create user with department_id (✅ user created with department assignment), 2) GET /api/org/users - Verify department_name in user list (✅ all users have department_name field, created user has correct department: IT), 3) PATCH /api/org/users/{user_id}/department - Change user department (✅ department assignment changed successfully from IT to HR), 4) GET /api/org/users - Verify department change (✅ user department change verified), 5) PATCH /api/org/users/{user_id}/department - Remove user from department (✅ user removed from department successfully), 6) Invalid department assignment properly rejected (✅ 404 for invalid department ID). All user department operations working perfectly with proper validation and data persistence."
 
   - task: "Department Assignment for Owner Roles"
     implemented: true
-    working: needs_testing
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: needs_testing
         agent: "main"
         comment: "NEW: Owner roles can be assigned to departments via department_id field. Tasks with owner_role are filtered by department for normal users."
+      - working: true
+        agent: "testing"
+        comment: "✅ OWNER ROLE DEPARTMENT ASSIGNMENT TESTING COMPLETED SUCCESSFULLY (100% success rate - 5/5 tests passed): Tested with organization admin credentials admin@testfirma.de / Test123!. 1) POST /api/owner-roles - Create owner role with department_id (✅ IT Support role created with department assignment), 2) GET /api/owner-roles - Verify department_id in owner roles list (✅ created owner role has correct department_id), 3) PUT /api/owner-roles/{id} - Update owner role with different department_id (✅ owner role department assignment updated successfully), 4) POST /api/owner-roles - Create owner role without department_id (✅ owner role created without department), 5) PUT /api/owner-roles/{id} - Remove department from owner role (✅ owner role department removed successfully). All owner role department operations working perfectly with proper validation and flexibility for roles with/without departments."
 
   - task: "My Tasks Department Filtering"
     implemented: true
-    working: needs_testing
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: needs_testing
         agent: "main"
         comment: "NEW: GET /api/tasks/my-tasks filters tasks by department. Admins see all tasks. Users with department see tasks where owner_role belongs to their department."
+      - working: true
+        agent: "testing"
+        comment: "✅ MY TASKS DEPARTMENT FILTERING TESTING COMPLETED SUCCESSFULLY (CRITICAL FEATURE WORKING): Tested complete department filtering scenario with organization admin credentials admin@testfirma.de / Test123!. 1) Created IT-Abteilung and HR-Abteilung departments, 2) Created IT and HR owner roles assigned to respective departments, 3) Created regular user assigned to IT-Abteilung, 4) Created test template with tasks for different owner roles (IT, HR, Manager), 5) Created test case with 3 tasks, 6) ✅ ADMIN ACCESS: Admin sees ALL 3 tasks (IT: 1, HR: 1, Manager: 1), 7) ✅ CRITICAL: DEPARTMENT FILTERING WORKS - IT user only sees IT tasks (1 IT task), filtering correctly excludes HR and Manager tasks. The core department-based task filtering logic is working correctly - users with department assignments only see tasks where the owner_role belongs to their department."
 
   - task: "Frontend Department Management"
     implemented: true
