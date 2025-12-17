@@ -300,6 +300,13 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
+test_plan:
+  current_focus:
+    - "GDPR/DSGVO Compliance Features"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
 agent_communication:
   - agent: "testing"
     message: "Backend admin separation testing completed successfully. All 4 critical backend tasks are working correctly: 1) Super-Admin login returns is_super_admin flag, 2) Auth/me endpoint works for Super-Admin, 3) Admin endpoints accessible only to Super-Admins, 4) Regular users blocked from admin endpoints. Fixed security issue where regular admins could access super-admin endpoints. Frontend testing still needed for complete validation."
