@@ -3053,7 +3053,7 @@ class OnboardingAutomatTester:
             self.test_settings,
             self.test_users,
             self.test_audit_logs,
-            self.test_gdpr_endpoints,
+            self.test_gdpr_compliance_features,
             self.test_pdf_report
         ]
         
