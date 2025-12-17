@@ -308,6 +308,17 @@ class CategoryCreate(CategoryBase):
 class CategoryResponse(CategoryBase):
     id: str
 
+# Department Models
+class DepartmentBase(BaseModel):
+    name: str
+    color: str = "#3b82f6"
+
+class DepartmentCreate(DepartmentBase):
+    pass
+
+class DepartmentResponse(DepartmentBase):
+    id: str
+
 class TemplateTaskBase(BaseModel):
     title: str
     description: str = ""
