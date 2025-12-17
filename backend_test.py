@@ -2606,6 +2606,7 @@ class OnboardingAutomatTester:
             self.test_user_department_assignment,  # Test User Department Assignment - NEW FEATURE
             self.test_owner_role_department_assignment,  # Test Owner Role Department Assignment - NEW FEATURE
             self.test_my_tasks_department_filtering,  # Test My Tasks Department Filtering - CRITICAL NEW FEATURE
+            self.test_task_dependencies_backend,  # Test Task Dependencies Backend - NEW FEATURE
             self.test_categories_crud_api,  # Test Categories CRUD API - EXISTING FEATURE
             self.test_organization_admin_endpoints,  # Test Organization-Admin endpoints
             self.test_blocked_user_login,  # Test blocked user login restriction
