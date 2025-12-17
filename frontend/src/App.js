@@ -14,6 +14,8 @@ import TemplateEditor from "./pages/TemplateEditor";
 import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
 import PrivacyCenter from "./pages/PrivacyCenter";
+import Datenschutz from "./pages/Datenschutz";
+import Impressum from "./pages/Impressum";
 import OrgUserManagement from "./pages/OrgUserManagement";
 import AdminPanel from "./pages/AdminPanel";
 import AdminLogin from "./pages/AdminLogin";
@@ -22,6 +24,7 @@ import AdminStats from "./pages/AdminStats";
 import AdminAuditLog from "./pages/AdminAuditLog";
 import Layout from "./components/Layout";
 import AdminLayout from "./components/AdminLayout";
+import CookieBanner from "./components/CookieBanner";
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
