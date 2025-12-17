@@ -1701,7 +1701,15 @@ async def create_template(data: TemplateCreate, admin: dict = Depends(require_ad
 @api_router.put("/templates/{template_id}", response_model=TemplateResponse)
 async def update_template(template_id: str, data: TemplateCreate, admin: dict = Depends(require_admin)):
     now = datetime.now(timezone.utc).isoformat()
-    tasks = [{"id": str(uuid.uuid4()), **t.model_dump()} for t in data.tasks]
+    # Preserve existing task IDs if they exist, otherwise generate new ones
+    tasks = []
+    for t in data.tasks:
+        task_dict = t.model_dump()
+        # If task doesn't have an ID or it's a temporary frontend ID, generate a new one
+        if not task_dict.get("id") or str(task_dict.get("id", "")).startswith("new-"):
+            task_dict["id"] = str(uuid.uuid4())
+        tasks.append(task_dict)
+    
     query = {"id": template_id, **get_org_filter(admin)}
     await db.templates.update_one(
         query,
