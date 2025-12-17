@@ -348,12 +348,17 @@ export default function CaseDetail() {
               };
               const canEdit = isAdmin || task.owner_email === user?.email;
               const needsEvidence = task.evidence_required && !task.evidence_uploaded && task.status === "open";
+              const isBlocked = task.is_blocked;
+              // Find the blocking task's title
+              const blockingTask = isBlocked && task.depends_on 
+                ? filteredTasks.find(t => t.id === task.depends_on)
+                : null;
 
               return (
-                <Card key={task.id} className={`border-l-4 ${priorityStyles[priority]}`} data-testid={`task-item-${task.id}`}>
+                <Card key={task.id} className={`border-l-4 ${priorityStyles[priority]} ${isBlocked ? "opacity-60" : ""}`} data-testid={`task-item-${task.id}`}>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
-                      {canEdit && (
+                      {canEdit && !isBlocked && (
                         <Checkbox
                           checked={task.status === "done"}
                           onCheckedChange={() => toggleTaskStatus(task)}
@@ -361,12 +366,23 @@ export default function CaseDetail() {
                           data-testid={`task-checkbox-${task.id}`}
                         />
                       )}
+                      {isBlocked && (
+                        <div className="h-5 w-5 flex items-center justify-center text-slate-400" title={blockingTask ? `Warten auf: ${blockingTask.title}` : "Blockiert"}>
+                          <Lock className="h-4 w-4" />
+                        </div>
+                      )}
                       <div className="flex-1 cursor-pointer" onClick={() => openTaskModal(task)}>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className={`font-medium ${task.status === "done" ? "text-slate-400 line-through" : "text-slate-900"}`}>
+                          <h4 className={`font-medium ${task.status === "done" ? "text-slate-400 line-through" : isBlocked ? "text-slate-500" : "text-slate-900"}`}>
                             {task.title}
                           </h4>
-                          {priority === "overdue" && <Badge variant="destructive" className="text-xs">Überfällig</Badge>}
+                          {isBlocked && (
+                            <Badge variant="outline" className="text-xs text-slate-500 border-slate-300">
+                              <Lock className="w-3 h-3 mr-1" />
+                              {blockingTask ? `Warten auf: ${blockingTask.title}` : "Blockiert"}
+                            </Badge>
+                          )}
+                          {priority === "overdue" && !isBlocked && <Badge variant="destructive" className="text-xs">Überfällig</Badge>}
                           {task.evidence_required && (
                             <Badge variant={task.evidence_uploaded ? "secondary" : "outline"} className={`text-xs ${task.evidence_uploaded ? "bg-emerald-100 text-emerald-700" : needsEvidence ? "text-amber-600 border-amber-300" : ""}`}>
                               <Paperclip className="w-3 h-3 mr-1" />
