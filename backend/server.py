@@ -1062,6 +1062,7 @@ class OrgUserCreate(BaseModel):
     email: EmailStr
     password: str
     role: str = "user"  # user or admin
+    department_id: Optional[str] = None
 
 @api_router.post("/org/users")
 async def create_org_user(user_data: OrgUserCreate, current_user: dict = Depends(require_admin)):
@@ -1105,6 +1106,7 @@ async def create_org_user(user_data: OrgUserCreate, current_user: dict = Depends
         "hashed_password": pwd_context.hash(user_data.password),
         "password_hash": pwd_context.hash(user_data.password),
         "role": user_data.role,
+        "department_id": user_data.department_id,
         "organization_id": org_id,
         "is_super_admin": False,
         "status": "active",
