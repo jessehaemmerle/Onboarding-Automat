@@ -292,7 +292,7 @@ metadata:
         comment: "NEW: Template editor has dependency dropdown. CaseDetail shows blocked tasks with lock icon and disabled checkbox."
 
 test_plan:
-  current_focus: ["Task Dependencies Backend", "Task Dependencies Frontend"]
+  current_focus: ["Task Dependencies Frontend"]
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
