@@ -2602,7 +2602,11 @@ class OnboardingAutomatTester:
         test_suites = [
             self.test_seed_data,
             self.test_super_admin_auth,  # Test Super-Admin functionality with new endpoints
-            self.test_categories_crud_api,  # Test Categories CRUD API - NEW FEATURE
+            self.test_departments_crud_api,  # Test Departments CRUD API - NEW FEATURE
+            self.test_user_department_assignment,  # Test User Department Assignment - NEW FEATURE
+            self.test_owner_role_department_assignment,  # Test Owner Role Department Assignment - NEW FEATURE
+            self.test_my_tasks_department_filtering,  # Test My Tasks Department Filtering - CRITICAL NEW FEATURE
+            self.test_categories_crud_api,  # Test Categories CRUD API - EXISTING FEATURE
             self.test_organization_admin_endpoints,  # Test Organization-Admin endpoints
             self.test_blocked_user_login,  # Test blocked user login restriction
             self.test_regular_user_admin_access,  # Test regular user restrictions
