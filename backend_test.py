@@ -2589,10 +2589,10 @@ class OnboardingAutomatTester:
         return True
 
     def test_task_dependencies_backend(self):
-        """Test Task Dependencies Backend functionality"""
-        self.log("\n=== TESTING TASK DEPENDENCIES BACKEND ===")
+        """Test Task Dependencies Backend functionality after bug fix"""
+        self.log("\n=== TESTING TASK DEPENDENCIES BACKEND (AFTER BUG FIX) ===")
         
-        # Login as organization admin
+        # Login as organization admin with provided credentials
         success, response = self.run_test(
             "Login as organization admin for task dependencies testing",
             "POST",
@@ -2608,44 +2608,37 @@ class OnboardingAutomatTester:
         # Store original token and use org admin token
         original_token = self.token
         self.token = response['access_token']
+        org_admin_user = response.get('user', {})
         
-        self.log("✅ Logged in as organization admin for task dependencies testing")
+        self.log(f"✅ Logged in as {org_admin_user.get('email')} for task dependencies testing")
         
-        # Step 1: Create a template with task dependencies
-        dependency_template_data = {
-            "name": "Task Dependencies Test Template",
-            "description": "Template for testing task dependencies",
+        # Step 1: Create a new template with 2 tasks where Task B depends on Task A
+        template_data = {
+            "name": "Dependency Test Template",
+            "description": "Template to test task dependencies",
             "template_type": "onboarding",
             "tasks": [
                 {
-                    "title": "Task A - Foundation",
-                    "description": "This task must be completed first",
+                    "id": "task-a-id",  # Stable ID for Task A
+                    "title": "Laptop bereitstellen",
+                    "description": "Laptop für neuen Mitarbeiter bereitstellen",
                     "category": "IT",
                     "owner_role": "IT",
-                    "offset_days": 0,
+                    "offset_days": -2,
                     "evidence_required": False,
                     "sort_order": 1,
-                    "depends_on": None  # No dependency
+                    "depends_on": None  # Task A has no dependencies
                 },
                 {
-                    "title": "Task B - Depends on A",
-                    "description": "This task depends on Task A",
+                    "id": "task-b-id",  # Stable ID for Task B
+                    "title": "Software installieren",
+                    "description": "Benötigte Software auf Laptop installieren",
                     "category": "IT",
                     "owner_role": "IT",
-                    "offset_days": 1,
+                    "offset_days": -1,
                     "evidence_required": False,
                     "sort_order": 2,
-                    "depends_on": "task_a_template_id"  # Will be replaced with actual template task ID
-                },
-                {
-                    "title": "Task C - Independent",
-                    "description": "This task has no dependencies",
-                    "category": "HR",
-                    "owner_role": "HR",
-                    "offset_days": 0,
-                    "evidence_required": False,
-                    "sort_order": 3,
-                    "depends_on": None  # No dependency
+                    "depends_on": "task-a-id"  # Task B depends on Task A
                 }
             ]
         }
