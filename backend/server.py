@@ -391,6 +391,8 @@ class TaskResponse(BaseModel):
     completed_at: Optional[str] = None
     completed_by: Optional[str] = None
     created_at: str
+    depends_on: Optional[str] = None  # ID of the task this depends on
+    is_blocked: bool = False  # True if depends_on task is not completed
 
 class TaskCommentCreate(BaseModel):
     body: str
