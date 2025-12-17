@@ -2042,11 +2042,25 @@ async def get_my_tasks(current_user: dict = Depends(get_current_user)):
         ]
         evidence_counts = {doc["_id"]: doc["count"] for doc in await db.evidence.aggregate(evidence_pipeline).to_list(1000)}
         
-        # Add evidence info to tasks
+        # Build task status map for dependency checking
+        task_status_map = {t["id"]: t.get("status", "open") for t in tasks}
+        
+        # Also fetch status of tasks that are dependencies but not in current result set
+        depends_on_ids = [t.get("depends_on") for t in tasks if t.get("depends_on")]
+        missing_ids = [d for d in depends_on_ids if d not in task_status_map]
+        if missing_ids:
+            dep_tasks = await db.tasks.find({"id": {"$in": missing_ids}}, {"_id": 0, "id": 1, "status": 1}).to_list(100)
+            for dt in dep_tasks:
+                task_status_map[dt["id"]] = dt.get("status", "open")
+        
+        # Add evidence info and is_blocked status to tasks
         for t in tasks:
             if "evidence_required" not in t:
                 t["evidence_required"] = False
             t["evidence_uploaded"] = evidence_counts.get(t["id"], 0) > 0
+            # Task is blocked if it has a dependency that is not completed
+            depends_on = t.get("depends_on")
+            t["is_blocked"] = depends_on is not None and task_status_map.get(depends_on, "open") != "done"
     
     return [TaskResponse(**t) for t in tasks]
 
