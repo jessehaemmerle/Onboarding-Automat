@@ -259,7 +259,7 @@ metadata:
         comment: "NEW: Departments section in Settings page. Owner Roles can be assigned to departments. User Management includes department assignment."
 
 test_plan:
-  current_focus: ["Departments CRUD API", "Department Assignment for Users", "Department Assignment for Owner Roles", "My Tasks Department Filtering", "Frontend Department Management"]
+  current_focus: ["Frontend Department Management"]
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
