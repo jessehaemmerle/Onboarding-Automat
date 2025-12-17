@@ -2069,10 +2069,23 @@ async def update_task_status(task_id: str, status: str, current_user: dict = Dep
     if status not in ["open", "done"]:
         raise HTTPException(status_code=400, detail="Ungültiger Status")
     
-    # Check if evidence is required and uploaded
+    # Check if task exists
     query = {"id": task_id, **get_org_filter(current_user)}
     task = await db.tasks.find_one(query, {"_id": 0})
-    if task and task.get("evidence_required") and status == "done":
+    if not task:
+        raise HTTPException(status_code=404, detail="Task nicht gefunden")
+    
+    # Check if task is blocked by a dependency
+    if status == "done" and task.get("depends_on"):
+        dep_task = await db.tasks.find_one({"id": task["depends_on"]}, {"_id": 0, "status": 1, "title": 1})
+        if dep_task and dep_task.get("status") != "done":
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Diese Aufgabe ist blockiert. Bitte zuerst '{dep_task.get('title', 'Vorgänger-Aufgabe')}' abschließen."
+            )
+    
+    # Check if evidence is required and uploaded
+    if task.get("evidence_required") and status == "done":
         evidence_count = await db.evidence.count_documents({"task_id": task_id})
         if evidence_count == 0:
             raise HTTPException(status_code=400, detail="Nachweis erforderlich bevor der Task abgeschlossen werden kann")
