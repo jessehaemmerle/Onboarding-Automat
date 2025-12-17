@@ -295,7 +295,7 @@ metadata:
         comment: "❌ CRITICAL BUG FOUND AND FIXED: Template Editor was missing depends_on field in save payload (line 131 in TemplateEditor.js). This caused dependencies to be lost when saving templates. ✅ FIXED: Added depends_on: t.depends_on || null to template save payload. 🔍 CODE ANALYSIS CONFIRMS: 1) Template Editor has 'Abhängig von' dropdown (lines 322-342), 2) CaseDetail has lock icons for blocked tasks (lines 370-372), 3) CaseDetail has dependency badges 'Warten auf: [Task Name]' (lines 380-384), 4) CaseDetail has blocked task styling with opacity-60 (line 358). ❌ TESTING LIMITED: Authentication timeouts prevented full UI testing, but code analysis shows all required UI elements are implemented. The critical save bug has been fixed."
 
 test_plan:
-  current_focus: ["Task Dependencies Frontend"]
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
