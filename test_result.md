@@ -186,8 +186,68 @@ metadata:
         agent: "testing"
         comment: "✅ TEMPLATE EDITOR DYNAMIC CATEGORIES TESTING COMPLETED SUCCESSFULLY (100% success rate - 5/5 expected categories found): Tested with organization admin credentials admin@testfirma.de / Test123!. 1) ✅ Template editor loads correctly at /templates/new, 2) ✅ 'Task hinzufügen' button adds new task successfully, 3) ✅ Category dropdown in task row loads dynamically from API with all 5 expected categories (IT & Technik, Admin, Manager, HR, Security), 4) ✅ Category selection works correctly - selected 'IT & Technik' and confirmed in UI, 5) ✅ API integration working perfectly - categories loaded from /api/categories endpoint instead of hardcoded array. Dynamic category loading fully functional."
 
+  - task: "Departments CRUD API"
+    implemented: true
+    working: needs_testing
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: needs_testing
+        agent: "main"
+        comment: "NEW: Added CRUD endpoints for departments (GET/POST/PUT/DELETE /api/departments). Default departments created on org registration."
+
+  - task: "Department Assignment for Users"
+    implemented: true
+    working: needs_testing
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: needs_testing
+        agent: "main"
+        comment: "NEW: Users can be assigned to departments. PATCH /api/org/users/{user_id}/department endpoint added. User creation includes department_id field."
+
+  - task: "Department Assignment for Owner Roles"
+    implemented: true
+    working: needs_testing
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: needs_testing
+        agent: "main"
+        comment: "NEW: Owner roles can be assigned to departments via department_id field. Tasks with owner_role are filtered by department for normal users."
+
+  - task: "My Tasks Department Filtering"
+    implemented: true
+    working: needs_testing
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: needs_testing
+        agent: "main"
+        comment: "NEW: GET /api/tasks/my-tasks filters tasks by department. Admins see all tasks. Users with department see tasks where owner_role belongs to their department."
+
+  - task: "Frontend Department Management"
+    implemented: true
+    working: needs_testing
+    file: "frontend/src/pages/Settings.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: needs_testing
+        agent: "main"
+        comment: "NEW: Departments section in Settings page. Owner Roles can be assigned to departments. User Management includes department assignment."
+
 test_plan:
-  current_focus: []
+  current_focus: ["Departments CRUD API", "Department Assignment for Users", "Department Assignment for Owner Roles", "My Tasks Department Filtering", "Frontend Department Management"]
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
