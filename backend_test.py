@@ -2588,6 +2588,367 @@ class OnboardingAutomatTester:
         self.token = original_token
         return True
 
+    def test_task_dependencies_backend(self):
+        """Test Task Dependencies Backend functionality"""
+        self.log("\n=== TESTING TASK DEPENDENCIES BACKEND ===")
+        
+        # Login as organization admin
+        success, response = self.run_test(
+            "Login as organization admin for task dependencies testing",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "admin@testfirma.de", "password": "Test123!"}
+        )
+        
+        if not success or 'access_token' not in response:
+            self.log("❌ Could not login as organization admin for task dependencies testing")
+            return False
+        
+        # Store original token and use org admin token
+        original_token = self.token
+        self.token = response['access_token']
+        
+        self.log("✅ Logged in as organization admin for task dependencies testing")
+        
+        # Step 1: Create a template with task dependencies
+        dependency_template_data = {
+            "name": "Task Dependencies Test Template",
+            "description": "Template for testing task dependencies",
+            "template_type": "onboarding",
+            "tasks": [
+                {
+                    "title": "Task A - Foundation",
+                    "description": "This task must be completed first",
+                    "category": "IT",
+                    "owner_role": "IT",
+                    "offset_days": 0,
+                    "evidence_required": False,
+                    "sort_order": 1,
+                    "depends_on": None  # No dependency
+                },
+                {
+                    "title": "Task B - Depends on A",
+                    "description": "This task depends on Task A",
+                    "category": "IT",
+                    "owner_role": "IT",
+                    "offset_days": 1,
+                    "evidence_required": False,
+                    "sort_order": 2,
+                    "depends_on": "task_a_template_id"  # Will be replaced with actual template task ID
+                },
+                {
+                    "title": "Task C - Independent",
+                    "description": "This task has no dependencies",
+                    "category": "HR",
+                    "owner_role": "HR",
+                    "offset_days": 0,
+                    "evidence_required": False,
+                    "sort_order": 3,
+                    "depends_on": None  # No dependency
+                }
+            ]
+        }
+        
+        # We need to create the template first to get task IDs, then update dependencies
+        success, response = self.run_test(
+            "1. Create template with task dependencies",
+            "POST",
+            "templates",
+            200,
+            data=dependency_template_data
+        )
+        
+        dependency_template_id = None
+        task_a_id = None
+        task_b_id = None
+        task_c_id = None
+        
+        if success and response:
+            dependency_template_id = response.get('id')
+            tasks = response.get('tasks', [])
+            
+            # Find task IDs by title
+            for task in tasks:
+                if task.get('title') == 'Task A - Foundation':
+                    task_a_id = task.get('id')
+                elif task.get('title') == 'Task B - Depends on A':
+                    task_b_id = task.get('id')
+                elif task.get('title') == 'Task C - Independent':
+                    task_c_id = task.get('id')
+            
+            self.log(f"✅ Created dependency template: {dependency_template_id}")
+            self.log(f"   Task A ID: {task_a_id}")
+            self.log(f"   Task B ID: {task_b_id}")
+            self.log(f"   Task C ID: {task_c_id}")
+            
+            # Now update Task B to depend on Task A
+            if task_a_id and task_b_id:
+                updated_template_data = {
+                    "name": "Task Dependencies Test Template",
+                    "description": "Template for testing task dependencies",
+                    "template_type": "onboarding",
+                    "tasks": [
+                        {
+                            "title": "Task A - Foundation",
+                            "description": "This task must be completed first",
+                            "category": "IT",
+                            "owner_role": "IT",
+                            "offset_days": 0,
+                            "evidence_required": False,
+                            "sort_order": 1,
+                            "depends_on": None
+                        },
+                        {
+                            "title": "Task B - Depends on A",
+                            "description": "This task depends on Task A",
+                            "category": "IT",
+                            "owner_role": "IT",
+                            "offset_days": 1,
+                            "evidence_required": False,
+                            "sort_order": 2,
+                            "depends_on": task_a_id  # Now with actual task A ID
+                        },
+                        {
+                            "title": "Task C - Independent",
+                            "description": "This task has no dependencies",
+                            "category": "HR",
+                            "owner_role": "HR",
+                            "offset_days": 0,
+                            "evidence_required": False,
+                            "sort_order": 3,
+                            "depends_on": None
+                        }
+                    ]
+                }
+                
+                success, response = self.run_test(
+                    "2. Update template with correct dependency IDs",
+                    "PUT",
+                    f"templates/{dependency_template_id}",
+                    200,
+                    data=updated_template_data
+                )
+                
+                if success and response:
+                    tasks = response.get('tasks', [])
+                    task_b = next((t for t in tasks if t.get('title') == 'Task B - Depends on A'), None)
+                    
+                    if task_b and task_b.get('depends_on') == task_a_id:
+                        self.log("✅ Template dependency correctly saved: Task B depends on Task A")
+                    else:
+                        self.log(f"❌ Template dependency not saved correctly: {task_b.get('depends_on') if task_b else 'Task B not found'}")
+        
+        # Step 2: Create a case from the template with dependencies
+        dependency_case_data = {
+            "employee_name": "Dependencies Test Employee",
+            "employee_email": "deps.test@testfirma.de",
+            "template_id": dependency_template_id,
+            "start_date": (datetime.now() + timedelta(days=1)).isoformat(),
+            "location": "Berlin",
+            "manager_email": "manager@testfirma.de",
+            "case_type": "onboarding"
+        }
+        
+        success, response = self.run_test(
+            "3. Create case from template with dependencies",
+            "POST",
+            "cases",
+            200,
+            data=dependency_case_data
+        )
+        
+        dependency_case_id = None
+        case_task_a_id = None
+        case_task_b_id = None
+        case_task_c_id = None
+        
+        if success and response:
+            dependency_case_id = response.get('id')
+            case_tasks = response.get('tasks', [])
+            
+            # Find case task IDs by title
+            for task in case_tasks:
+                if task.get('title') == 'Task A - Foundation':
+                    case_task_a_id = task.get('id')
+                elif task.get('title') == 'Task B - Depends on A':
+                    case_task_b_id = task.get('id')
+                elif task.get('title') == 'Task C - Independent':
+                    case_task_c_id = task.get('id')
+            
+            self.log(f"✅ Created case with dependencies: {dependency_case_id}")
+            self.log(f"   Case Task A ID: {case_task_a_id}")
+            self.log(f"   Case Task B ID: {case_task_b_id}")
+            self.log(f"   Case Task C ID: {case_task_c_id}")
+            
+            # Verify dependency mapping: Task B should depend on Case Task A (not template Task A)
+            task_b = next((t for t in case_tasks if t.get('title') == 'Task B - Depends on A'), None)
+            if task_b:
+                depends_on = task_b.get('depends_on')
+                is_blocked = task_b.get('is_blocked')
+                
+                if depends_on == case_task_a_id:
+                    self.log("✅ Dependency IDs correctly mapped to new case task IDs")
+                else:
+                    self.log(f"❌ Dependency ID mapping failed: expected {case_task_a_id}, got {depends_on}")
+                
+                if is_blocked:
+                    self.log("✅ Task B correctly marked as blocked (is_blocked=true)")
+                else:
+                    self.log(f"❌ Task B should be blocked but is_blocked={is_blocked}")
+            
+            # Verify Task A and C are not blocked
+            task_a = next((t for t in case_tasks if t.get('title') == 'Task A - Foundation'), None)
+            task_c = next((t for t in case_tasks if t.get('title') == 'Task C - Independent'), None)
+            
+            if task_a and not task_a.get('is_blocked'):
+                self.log("✅ Task A correctly not blocked (no dependencies)")
+            else:
+                self.log(f"❌ Task A should not be blocked but is_blocked={task_a.get('is_blocked') if task_a else 'Task A not found'}")
+            
+            if task_c and not task_c.get('is_blocked'):
+                self.log("✅ Task C correctly not blocked (no dependencies)")
+            else:
+                self.log(f"❌ Task C should not be blocked but is_blocked={task_c.get('is_blocked') if task_c else 'Task C not found'}")
+        
+        # Step 3: Test GET /api/cases/{case_id} - verify is_blocked is computed correctly
+        success, response = self.run_test(
+            "4. GET /api/cases/{case_id} - Verify is_blocked computation",
+            "GET",
+            f"cases/{dependency_case_id}",
+            200
+        )
+        
+        if success and response:
+            case_tasks = response.get('tasks', [])
+            task_a = next((t for t in case_tasks if t.get('title') == 'Task A - Foundation'), None)
+            task_b = next((t for t in case_tasks if t.get('title') == 'Task B - Depends on A'), None)
+            task_c = next((t for t in case_tasks if t.get('title') == 'Task C - Independent'), None)
+            
+            if task_a and task_b and task_c:
+                self.log("✅ All tasks found in case details")
+                self.log(f"   Task A is_blocked: {task_a.get('is_blocked')}")
+                self.log(f"   Task B is_blocked: {task_b.get('is_blocked')}")
+                self.log(f"   Task C is_blocked: {task_c.get('is_blocked')}")
+                
+                # Verify blocking logic
+                if not task_a.get('is_blocked') and task_b.get('is_blocked') and not task_c.get('is_blocked'):
+                    self.log("✅ is_blocked computation is correct")
+                else:
+                    self.log("❌ is_blocked computation is incorrect")
+        
+        # Step 4: Try to complete blocked Task B - should fail with 400 error
+        success, response = self.run_test(
+            "5. Try to complete blocked Task B (should fail)",
+            "PATCH",
+            f"tasks/{case_task_b_id}/status?status=done",
+            400  # Should return 400 error
+        )
+        
+        if success:
+            self.log("✅ Blocked task completion correctly rejected with 400 error")
+        else:
+            self.log("❌ Blocked task completion should have been rejected")
+        
+        # Step 5: Complete Task A first
+        success, response = self.run_test(
+            "6. Complete Task A (blocking task)",
+            "PATCH",
+            f"tasks/{case_task_a_id}/status?status=done",
+            200
+        )
+        
+        if success:
+            self.log("✅ Task A completed successfully")
+        else:
+            self.log("❌ Failed to complete Task A")
+        
+        # Step 6: Verify Task B is no longer blocked after completing Task A
+        success, response = self.run_test(
+            "7. GET /api/cases/{case_id} - Verify Task B is unblocked",
+            "GET",
+            f"cases/{dependency_case_id}",
+            200
+        )
+        
+        if success and response:
+            case_tasks = response.get('tasks', [])
+            task_b = next((t for t in case_tasks if t.get('title') == 'Task B - Depends on A'), None)
+            
+            if task_b:
+                is_blocked = task_b.get('is_blocked')
+                if not is_blocked:
+                    self.log("✅ Task B is no longer blocked after completing Task A")
+                else:
+                    self.log(f"❌ Task B should be unblocked but is_blocked={is_blocked}")
+        
+        # Step 7: Now complete Task B - should succeed
+        success, response = self.run_test(
+            "8. Complete Task B (should succeed now)",
+            "PATCH",
+            f"tasks/{case_task_b_id}/status?status=done",
+            200
+        )
+        
+        if success:
+            self.log("✅ Task B completed successfully after dependency resolved")
+        else:
+            self.log("❌ Failed to complete Task B after dependency resolved")
+        
+        # Step 8: Test GET /api/tasks/my-tasks - verify is_blocked field is computed correctly
+        success, response = self.run_test(
+            "9. GET /api/tasks/my-tasks - Verify is_blocked field",
+            "GET",
+            "tasks/my-tasks",
+            200
+        )
+        
+        if success and response:
+            my_tasks = response
+            dependency_tasks = [t for t in my_tasks if t.get('case_id') == dependency_case_id]
+            
+            self.log(f"✅ Found {len(dependency_tasks)} dependency test tasks in my-tasks")
+            
+            for task in dependency_tasks:
+                title = task.get('title')
+                is_blocked = task.get('is_blocked')
+                status = task.get('status')
+                depends_on = task.get('depends_on')
+                
+                self.log(f"   {title}: status={status}, is_blocked={is_blocked}, depends_on={depends_on}")
+            
+            # All tasks should now be completed and not blocked
+            all_completed = all(t.get('status') == 'done' for t in dependency_tasks)
+            none_blocked = all(not t.get('is_blocked') for t in dependency_tasks)
+            
+            if all_completed and none_blocked:
+                self.log("✅ All dependency tasks completed and none blocked in my-tasks")
+            else:
+                self.log(f"❌ Dependency tasks state incorrect in my-tasks: all_completed={all_completed}, none_blocked={none_blocked}")
+        
+        # Cleanup: Delete test data
+        if dependency_case_id:
+            success, response = self.run_test(
+                "Cleanup: Delete dependency test case",
+                "DELETE",
+                f"cases/{dependency_case_id}",
+                200
+            )
+        
+        if dependency_template_id:
+            success, response = self.run_test(
+                "Cleanup: Delete dependency test template",
+                "DELETE",
+                f"templates/{dependency_template_id}",
+                200
+            )
+        
+        # Restore original token
+        self.token = original_token
+        
+        self.log("✅ Task Dependencies Backend testing completed")
+        return True
+
     def run_all_tests(self):
         """Run comprehensive test suite"""
         self.log("🚀 Starting Onboarding-Automat Backend API Tests")
