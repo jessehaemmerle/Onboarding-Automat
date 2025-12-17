@@ -1685,7 +1685,13 @@ async def get_template(template_id: str, current_user: dict = Depends(get_curren
 async def create_template(data: TemplateCreate, admin: dict = Depends(require_admin)):
     template_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
-    tasks = [{"id": str(uuid.uuid4()), **t.model_dump()} for t in data.tasks]
+    tasks = []
+    for t in data.tasks:
+        task_dict = t.model_dump()
+        # Generate ID if not provided or if it's a temporary frontend ID
+        if not task_dict.get("id") or str(task_dict.get("id", "")).startswith("new-"):
+            task_dict["id"] = str(uuid.uuid4())
+        tasks.append(task_dict)
     doc = {
         "id": template_id,
         "name": data.name,
