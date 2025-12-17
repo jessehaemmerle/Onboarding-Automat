@@ -8,7 +8,7 @@ import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { 
   Users, Loader2, Key, Ban, CheckCircle, Trash2, 
-  Mail, Calendar, UserPlus, Shield, Search, RefreshCw, UserCog
+  Mail, Calendar, UserPlus, Shield, Search, RefreshCw, UserCog, Briefcase
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
