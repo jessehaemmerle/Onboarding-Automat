@@ -100,13 +100,31 @@ export default function OrgUserManagement() {
       return;
     }
     try {
-      await axios.post(`${API}/org/users`, newUser);
+      const payload = {
+        ...newUser,
+        department_id: newUser.department_id || null
+      };
+      await axios.post(`${API}/org/users`, payload);
       toast.success(`Benutzer "${newUser.name}" erfolgreich erstellt`);
       setShowAddUserDialog(false);
-      setNewUser({ name: "", email: "", password: "", role: "user" });
+      setNewUser({ name: "", email: "", password: "", role: "user", department_id: "" });
       fetchData();
     } catch (err) {
       toast.error(err.response?.data?.detail || "Fehler beim Erstellen des Benutzers");
+    }
+  };
+
+  const updateDepartment = async () => {
+    if (!selectedUser) return;
+    try {
+      await axios.patch(`${API}/org/users/${selectedUser.id}/department?department_id=${newDepartmentId || ""}`);
+      toast.success("Abteilung erfolgreich geändert");
+      setShowDepartmentDialog(false);
+      setSelectedUser(null);
+      setNewDepartmentId("");
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Fehler beim Ändern der Abteilung");
     }
   };
 
