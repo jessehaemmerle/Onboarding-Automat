@@ -290,12 +290,14 @@ class TokenResponse(BaseModel):
 class OwnerRoleBase(BaseModel):
     name: str
     emails: List[str]
+    department_id: Optional[str] = None
 
 class OwnerRoleCreate(OwnerRoleBase):
     pass
 
 class OwnerRoleResponse(OwnerRoleBase):
     id: str
+    department_id: Optional[str] = None
 
 # Category Models
 class CategoryBase(BaseModel):
