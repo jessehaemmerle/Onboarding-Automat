@@ -326,6 +326,7 @@ class DepartmentResponse(DepartmentBase):
     id: str
 
 class TemplateTaskBase(BaseModel):
+    id: Optional[str] = None  # Optional ID, will be generated if not provided
     title: str
     description: str = ""
     category: str  # IT, Admin, Manager, Security
