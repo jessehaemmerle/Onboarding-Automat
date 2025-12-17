@@ -362,6 +362,18 @@ export default function OrgUserManagement() {
                           variant="outline"
                           onClick={() => {
                             setSelectedUser(targetUser);
+                            setNewDepartmentId(targetUser.department_id || "");
+                            setShowDepartmentDialog(true);
+                          }}
+                        >
+                          <Briefcase className="w-4 h-4 mr-1" />
+                          Abteilung
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedUser(targetUser);
                             setNewRole(targetUser.role);
                             setShowRoleDialog(true);
                           }}
