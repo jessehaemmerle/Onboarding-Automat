@@ -292,14 +292,14 @@ export default function TemplateEditor() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Offset (Tage)</Label>
+                      <Label>Tage vor Startdatum</Label>
                       <Input
                         type="number"
                         value={task.offset_days}
                         onChange={(e) => updateTask(index, "offset_days", e.target.value)}
                         data-testid={`task-offset-${index}`}
                       />
-                      <p className="text-xs text-slate-500">Negativ = vor Startdatum</p>
+                      <p className="text-xs text-slate-500">Positiv = vor Startdatum, Negativ = nach Startdatum</p>
                     </div>
                     <div className="md:col-span-2 space-y-2">
                       <Label>Beschreibung</Label>
