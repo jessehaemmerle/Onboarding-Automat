@@ -326,7 +326,7 @@ export default function OrgUserManagement() {
                         )}
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold text-slate-900">{targetUser.name}</p>
                           {targetUser.id === user?.id && (
                             <Badge variant="outline" className="text-xs">Sie</Badge>
@@ -334,6 +334,12 @@ export default function OrgUserManagement() {
                           <Badge variant={targetUser.role === "admin" ? "default" : "secondary"} className="text-xs">
                             {targetUser.role === "admin" ? "Admin" : "Benutzer"}
                           </Badge>
+                          {targetUser.department_name && (
+                            <Badge variant="outline" className="text-xs">
+                              <Briefcase className="w-3 h-3 mr-1" />
+                              {targetUser.department_name}
+                            </Badge>
+                          )}
                           {targetUser.status === "blocked" && (
                             <Badge variant="destructive" className="text-xs">Gesperrt</Badge>
                           )}
