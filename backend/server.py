@@ -1887,7 +1887,8 @@ async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(g
     tasks = []
     for t in template.get("tasks", []):
         owner_email = await resolve_owner_email(t["owner_role"], current_user["organization_id"])
-        due_date = start_date + timedelta(days=t["offset_days"])
+        # Positive offset = days BEFORE start date, negative = days AFTER
+        due_date = start_date - timedelta(days=t["offset_days"])
         task_doc = {
             "id": str(uuid.uuid4()),
             "case_id": case_id,
@@ -1952,7 +1953,8 @@ async def reschedule_case(case_id: str, data: RescheduleRequest, current_user: d
     
     open_tasks = await db.tasks.find({"case_id": case_id, "status": "open"}, {"_id": 0}).to_list(100)
     for task in open_tasks:
-        new_due = new_start + timedelta(days=task["offset_days"])
+        # Positive offset = days BEFORE start date, negative = days AFTER
+        new_due = new_start - timedelta(days=task["offset_days"])
         await db.tasks.update_one({"id": task["id"]}, {"$set": {"due_date": new_due.isoformat()}})
     
     return {"message": "Startdatum aktualisiert", "tasks_updated": len(open_tasks)}
