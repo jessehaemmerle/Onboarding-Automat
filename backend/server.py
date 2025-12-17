@@ -2349,16 +2349,16 @@ async def seed_data():
             "template_type": "onboarding",
             "created_at": now, "updated_at": now,
             "tasks": [
-                {"id": str(uuid.uuid4()), "title": "Laptop bereitstellen", "description": "MacBook/Windows nach Präferenz", "category": "IT", "owner_role": "IT", "offset_days": -3, "evidence_required": False, "sort_order": 1},
-                {"id": str(uuid.uuid4()), "title": "E-Mail Account erstellen", "description": "", "category": "IT", "owner_role": "IT", "offset_days": -2, "evidence_required": False, "sort_order": 2},
-                {"id": str(uuid.uuid4()), "title": "GitHub/GitLab Zugang", "description": "Repository-Zugriff einrichten", "category": "IT", "owner_role": "IT", "offset_days": -1, "evidence_required": False, "sort_order": 3},
+                {"id": str(uuid.uuid4()), "title": "Laptop bereitstellen", "description": "MacBook/Windows nach Präferenz", "category": "IT", "owner_role": "IT", "offset_days": 3, "evidence_required": False, "sort_order": 1},
+                {"id": str(uuid.uuid4()), "title": "E-Mail Account erstellen", "description": "", "category": "IT", "owner_role": "IT", "offset_days": 2, "evidence_required": False, "sort_order": 2},
+                {"id": str(uuid.uuid4()), "title": "GitHub/GitLab Zugang", "description": "Repository-Zugriff einrichten", "category": "IT", "owner_role": "IT", "offset_days": 1, "evidence_required": False, "sort_order": 3},
                 {"id": str(uuid.uuid4()), "title": "VPN Zugang einrichten", "description": "", "category": "IT", "owner_role": "IT", "offset_days": 0, "evidence_required": False, "sort_order": 4},
-                {"id": str(uuid.uuid4()), "title": "Arbeitsplatz vorbereiten", "description": "Schreibtisch, Stuhl, Monitor", "category": "Admin", "owner_role": "Office", "offset_days": -1, "evidence_required": False, "sort_order": 5},
+                {"id": str(uuid.uuid4()), "title": "Arbeitsplatz vorbereiten", "description": "Schreibtisch, Stuhl, Monitor", "category": "Admin", "owner_role": "Office", "offset_days": 1, "evidence_required": False, "sort_order": 5},
                 {"id": str(uuid.uuid4()), "title": "Welcome Pack", "description": "Firmenmaterial überreichen", "category": "Admin", "owner_role": "HR", "offset_days": 0, "evidence_required": False, "sort_order": 6},
                 {"id": str(uuid.uuid4()), "title": "Onboarding-Meeting planen", "description": "", "category": "Manager", "owner_role": "Manager", "offset_days": 0, "evidence_required": False, "sort_order": 7},
                 {"id": str(uuid.uuid4()), "title": "Buddy zuweisen", "description": "Mentor für erste Wochen", "category": "Manager", "owner_role": "Manager", "offset_days": 0, "evidence_required": False, "sort_order": 8},
-                {"id": str(uuid.uuid4()), "title": "IDE & Tools Setup", "description": "VS Code, Docker, etc.", "category": "IT", "owner_role": "IT", "offset_days": 1, "evidence_required": False, "sort_order": 9},
-                {"id": str(uuid.uuid4()), "title": "Erste Ziele definieren", "description": "30/60/90 Tage Plan", "category": "Manager", "owner_role": "Manager", "offset_days": 7, "evidence_required": False, "sort_order": 10},
+                {"id": str(uuid.uuid4()), "title": "IDE & Tools Setup", "description": "VS Code, Docker, etc.", "category": "IT", "owner_role": "IT", "offset_days": -1, "evidence_required": False, "sort_order": 9},
+                {"id": str(uuid.uuid4()), "title": "Erste Ziele definieren", "description": "30/60/90 Tage Plan", "category": "Manager", "owner_role": "Manager", "offset_days": -7, "evidence_required": False, "sort_order": 10},
             ]
         },
         {
