@@ -74,6 +74,7 @@ export default function TemplateEditor() {
           offset_days: 0,
           evidence_required: false,
           sort_order: template.tasks.length,
+          depends_on: null,
         },
       ],
     });
