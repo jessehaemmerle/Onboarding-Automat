@@ -1511,6 +1511,7 @@ async def create_owner_role(data: OwnerRoleCreate, admin: dict = Depends(require
         "id": role_id,
         "name": data.name,
         "emails": data.emails,
+        "department_id": data.department_id,
         "organization_id": admin["organization_id"]
     }
     await db.owner_roles.insert_one(doc)
@@ -1519,7 +1520,7 @@ async def create_owner_role(data: OwnerRoleCreate, admin: dict = Depends(require
 @api_router.put("/owner-roles/{role_id}", response_model=OwnerRoleResponse)
 async def update_owner_role(role_id: str, data: OwnerRoleCreate, admin: dict = Depends(require_admin)):
     query = {"id": role_id, **get_org_filter(admin)}
-    await db.owner_roles.update_one(query, {"$set": {"name": data.name, "emails": data.emails}})
+    await db.owner_roles.update_one(query, {"$set": {"name": data.name, "emails": data.emails, "department_id": data.department_id}})
     updated = await db.owner_roles.find_one(query, {"_id": 0})
     if not updated:
         raise HTTPException(status_code=404, detail="Rolle nicht gefunden")
