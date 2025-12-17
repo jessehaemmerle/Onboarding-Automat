@@ -75,12 +75,14 @@ export default function OrgUserManagement() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [usersRes, orgRes] = await Promise.all([
+      const [usersRes, orgRes, deptsRes] = await Promise.all([
         axios.get(`${API}/org/users`),
-        axios.get(`${API}/org/info`)
+        axios.get(`${API}/org/info`),
+        axios.get(`${API}/departments`)
       ]);
       setUsers(usersRes.data);
       setOrgInfo(orgRes.data);
+      setDepartments(deptsRes.data);
     } catch (err) {
       toast.error("Fehler beim Laden der Daten");
     } finally {
