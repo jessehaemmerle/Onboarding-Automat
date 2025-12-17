@@ -263,9 +263,9 @@ metadata:
 
   - task: "Task Dependencies Backend"
     implemented: true
-    working: false
+    working: true
     file: "backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
@@ -275,6 +275,9 @@ metadata:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL DEPENDENCY MAPPING BUG: Template with dependencies creates correctly, but case creation fails to map template task dependencies to new case task IDs. Task B depends_on field shows None instead of case task A ID. This causes: 1) is_blocked computation fails (always false), 2) Blocking logic doesn't work (tasks complete when they shouldn't), 3) Dependency workflow broken. Root cause: dependency mapping logic in case creation (lines 1897-1938) has bug in template_to_case_task_id mapping. Template dependencies saved correctly, but not transferred to case tasks."
+      - working: true
+        agent: "testing"
+        comment: "✅ CRITICAL DEPENDENCY MAPPING BUG FIXED! Comprehensive testing completed successfully (100% success rate - 8/8 tests passed): 1) ✅ Template creation with stable task IDs and dependencies works correctly (Task A: 'Laptop bereitstellen', Task B: 'Software installieren' depends on Task A), 2) ✅ Template dependencies persist correctly after retrieval, 3) ✅ CRITICAL FIX: Case creation now correctly maps template task dependencies to new case task IDs (Task B depends_on points to case Task A's ID), 4) ✅ Task B has is_blocked=true initially (correct blocking), 5) ✅ Task B completion correctly blocked with 400 error when dependency not met, 6) ✅ Task A completion succeeds, 7) ✅ Task B becomes unblocked (is_blocked=false) after Task A completion, 8) ✅ Task B completion succeeds after dependency resolved. Complete dependency workflow working perfectly: template creation → case creation with correct ID mapping → blocking logic → dependency resolution → task completion. The template_to_case_task_id mapping bug in case creation (lines 1912-1950) has been successfully fixed."
 
   - task: "Task Dependencies Frontend"
     implemented: true
