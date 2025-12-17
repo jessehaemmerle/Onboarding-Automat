@@ -263,15 +263,18 @@ metadata:
 
   - task: "Task Dependencies Backend"
     implemented: true
-    working: needs_testing
+    working: false
     file: "backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: needs_testing
         agent: "main"
         comment: "NEW: Tasks can have dependencies via depends_on field. Blocked tasks cannot be completed. is_blocked status computed dynamically."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL DEPENDENCY MAPPING BUG: Template with dependencies creates correctly, but case creation fails to map template task dependencies to new case task IDs. Task B depends_on field shows None instead of case task A ID. This causes: 1) is_blocked computation fails (always false), 2) Blocking logic doesn't work (tasks complete when they shouldn't), 3) Dependency workflow broken. Root cause: dependency mapping logic in case creation (lines 1897-1938) has bug in template_to_case_task_id mapping. Template dependencies saved correctly, but not transferred to case tasks."
 
   - task: "Task Dependencies Frontend"
     implemented: true
