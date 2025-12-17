@@ -1570,6 +1570,43 @@ async def delete_category(category_id: str, admin: dict = Depends(require_admin)
         raise HTTPException(status_code=404, detail="Kategorie nicht gefunden")
     return {"message": "Gelöscht"}
 
+# ============ DEPARTMENTS ROUTES ============
+
+@api_router.get("/departments", response_model=List[DepartmentResponse])
+async def get_departments(current_user: dict = Depends(get_current_user)):
+    query = get_org_filter(current_user)
+    departments = await db.departments.find(query, {"_id": 0}).to_list(100)
+    return [DepartmentResponse(**d) for d in departments]
+
+@api_router.post("/departments", response_model=DepartmentResponse)
+async def create_department(data: DepartmentCreate, admin: dict = Depends(require_admin)):
+    department_id = str(uuid.uuid4())
+    doc = {
+        "id": department_id,
+        "name": data.name,
+        "color": data.color,
+        "organization_id": admin["organization_id"]
+    }
+    await db.departments.insert_one(doc)
+    return DepartmentResponse(**doc)
+
+@api_router.put("/departments/{department_id}", response_model=DepartmentResponse)
+async def update_department(department_id: str, data: DepartmentCreate, admin: dict = Depends(require_admin)):
+    query = {"id": department_id, **get_org_filter(admin)}
+    await db.departments.update_one(query, {"$set": {"name": data.name, "color": data.color}})
+    updated = await db.departments.find_one(query, {"_id": 0})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Abteilung nicht gefunden")
+    return DepartmentResponse(**updated)
+
+@api_router.delete("/departments/{department_id}")
+async def delete_department(department_id: str, admin: dict = Depends(require_admin)):
+    query = {"id": department_id, **get_org_filter(admin)}
+    result = await db.departments.delete_one(query)
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Abteilung nicht gefunden")
+    return {"message": "Gelöscht"}
+
 # ============ TEMPLATES ROUTES ============
 
 @api_router.get("/templates", response_model=List[TemplateResponse])
