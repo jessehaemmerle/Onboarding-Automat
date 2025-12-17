@@ -1843,11 +1843,17 @@ async def get_case(case_id: str, current_user: dict = Depends(get_current_user))
         ]
         evidence_counts = {doc["_id"]: doc["count"] for doc in await db.evidence.aggregate(evidence_pipeline).to_list(100)}
         
-        # Add evidence info to tasks
+        # Build task status map for dependency checking
+        task_status_map = {t["id"]: t.get("status", "open") for t in tasks}
+        
+        # Add evidence info and is_blocked status to tasks
         for t in tasks:
             if "evidence_required" not in t:
                 t["evidence_required"] = False
             t["evidence_uploaded"] = evidence_counts.get(t["id"], 0) > 0
+            # Task is blocked if it has a dependency that is not completed
+            depends_on = t.get("depends_on")
+            t["is_blocked"] = depends_on is not None and task_status_map.get(depends_on, "open") != "done"
     
     case["tasks"] = tasks
     return OnboardingCaseResponse(**case)
