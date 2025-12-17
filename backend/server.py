@@ -1966,7 +1966,40 @@ async def update_case_status(case_id: str, status: str, current_user: dict = Dep
 
 @api_router.get("/tasks/my-tasks", response_model=List[TaskResponse])
 async def get_my_tasks(current_user: dict = Depends(get_current_user)):
-    query = {"owner_email": current_user["email"], **get_org_filter(current_user)}
+    """
+    Get tasks for current user:
+    - Admins see all tasks in the organization
+    - Regular users with a department see tasks where the owner_role belongs to their department
+    - Users without department see only tasks assigned directly to their email
+    """
+    org_filter = get_org_filter(current_user)
+    is_admin = current_user.get("role") == "admin" or current_user.get("is_super_admin")
+    user_department_id = current_user.get("department_id")
+    
+    if is_admin:
+        # Admins see all tasks in the organization
+        query = org_filter
+    elif user_department_id:
+        # Regular user with department: find owner_roles that belong to user's department
+        department_roles = await db.owner_roles.find(
+            {"department_id": user_department_id, **org_filter}, 
+            {"_id": 0, "name": 1}
+        ).to_list(100)
+        role_names = [r["name"] for r in department_roles]
+        
+        if role_names:
+            # Get tasks where owner_role_snapshot matches one of the department's roles
+            query = {
+                "owner_role_snapshot": {"$in": role_names},
+                **org_filter
+            }
+        else:
+            # No roles in department, fall back to direct assignment
+            query = {"owner_email": current_user["email"], **org_filter}
+    else:
+        # No department assigned, show only directly assigned tasks
+        query = {"owner_email": current_user["email"], **org_filter}
+    
     tasks = await db.tasks.find(query, {"_id": 0}).to_list(1000)
     
     # OPTIMIZED: Batch fetch evidence counts in ONE aggregation instead of N queries
