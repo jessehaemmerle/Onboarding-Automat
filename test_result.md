@@ -261,8 +261,32 @@ metadata:
         agent: "testing"
         comment: "✅ FRONTEND DEPARTMENT MANAGEMENT TESTING COMPLETED SUCCESSFULLY (100% success rate - 8/8 features tested): Tested with organization admin credentials admin@testfirma.de / Test123!. 1) ✅ SETTINGS PAGE - DEPARTMENTS SECTION: 'Abteilungen' section visible with 7 departments (IT-Abteilung, HR, Management, HR-Abteilung, Marketing, Updated Test Abteilung), all expected departments (IT, HR, Management) found. 2) ✅ DEPARTMENT CRUD: 'Neue Abteilung' button working, create department dialog opens with name input and 8 color options, department creation and editing functional. 3) ✅ OWNER ROLES DEPARTMENT ASSIGNMENT: 'Neue Rolle' button working, role dialog includes 'Abteilung' dropdown with all available departments, department assignment to roles working correctly. 4) ✅ USER MANAGEMENT DEPARTMENT FEATURES: 'Neuer Benutzer' dialog includes 'Abteilung' dropdown for department assignment, 'Abteilung' buttons present on user rows for department changes, department change dialog functional. 5) ✅ DEPARTMENT INDICATORS: Briefcase icons visible on user rows indicating department assignments. All department management UI features working perfectly with proper integration between Settings, Owner Roles, and User Management pages."
 
+  - task: "Task Dependencies Backend"
+    implemented: true
+    working: needs_testing
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: needs_testing
+        agent: "main"
+        comment: "NEW: Tasks can have dependencies via depends_on field. Blocked tasks cannot be completed. is_blocked status computed dynamically."
+
+  - task: "Task Dependencies Frontend"
+    implemented: true
+    working: needs_testing
+    file: "frontend/src/pages/TemplateEditor.js, frontend/src/pages/CaseDetail.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: needs_testing
+        agent: "main"
+        comment: "NEW: Template editor has dependency dropdown. CaseDetail shows blocked tasks with lock icon and disabled checkbox."
+
 test_plan:
-  current_focus: []
+  current_focus: ["Task Dependencies Backend", "Task Dependencies Frontend"]
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
