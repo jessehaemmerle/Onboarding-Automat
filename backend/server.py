@@ -154,6 +154,7 @@ async def create_indexes():
         await db.templates.create_index("organization_id")
         await db.owner_roles.create_index("organization_id")
         await db.categories.create_index("organization_id")
+        await db.departments.create_index("organization_id")
         
         # Evidence lookup optimization
         await db.evidence.create_index("task_id")
