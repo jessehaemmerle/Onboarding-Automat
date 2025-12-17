@@ -2901,6 +2901,107 @@ async def revoke_consent(consent_type: str, current_user: dict = Depends(get_cur
     
     return {"message": f"Einwilligung '{consent_type}' wurde widerrufen"}
 
+@api_router.delete("/gdpr/delete-account")
+async def delete_my_account(confirm: bool = False, current_user: dict = Depends(get_current_user)):
+    """DSGVO Art. 17 - Recht auf Löschung: Account und alle Daten sofort löschen"""
+    if not confirm:
+        raise HTTPException(status_code=400, detail="Bitte bestätigen Sie die Löschung mit confirm=true")
+    
+    user_id = current_user["id"]
+    user_email = current_user["email"]
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Check if user is the only admin in their organization
+    org_id = current_user.get("organization_id")
+    if org_id and current_user.get("role") == "admin":
+        admin_count = await db.users.count_documents({"organization_id": org_id, "role": "admin", "id": {"$ne": user_id}})
+        if admin_count == 0:
+            raise HTTPException(
+                status_code=400, 
+                detail="Sie sind der einzige Administrator dieser Organisation. Bitte ernennen Sie zuerst einen anderen Administrator oder kontaktieren Sie den Support."
+            )
+    
+    # Anonymize user data instead of hard delete (for audit trail)
+    anonymized_name = f"Gelöschter Benutzer {user_id[:8]}"
+    anonymized_email = f"deleted_{user_id[:8]}@anonymized.local"
+    
+    # Update user to anonymized state
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "name": anonymized_name,
+            "email": anonymized_email,
+            "role": "deleted",
+            "password_hash": "",
+            "hashed_password": "",
+            "deleted_at": now,
+            "deleted_by": "self"
+        }}
+    )
+    
+    # Anonymize comments
+    await db.task_comments.update_many(
+        {"user_id": user_id},
+        {"$set": {"user_name": anonymized_name, "user_email": anonymized_email}}
+    )
+    
+    # Delete evidence files (actual data)
+    await db.evidence.delete_many({"uploaded_by": user_email})
+    
+    # Anonymize audit logs
+    await db.audit_logs.update_many(
+        {"user_id": user_id},
+        {"$set": {"user_name": anonymized_name, "user_email": anonymized_email}}
+    )
+    
+    # Delete consents
+    await db.consents.delete_many({"user_id": user_id})
+    
+    await log_audit(
+        user={"id": user_id, "email": anonymized_email, "name": anonymized_name},
+        action="delete",
+        resource_type="user",
+        resource_id=user_id,
+        details="Account selbst gelöscht (DSGVO Art. 17)"
+    )
+    
+    return {
+        "message": "Ihr Account wurde erfolgreich gelöscht",
+        "info": "Ihre personenbezogenen Daten wurden anonymisiert. Für statistische Zwecke wurden einige anonymisierte Daten beibehalten."
+    }
+
+@api_router.post("/gdpr/consents")
+async def save_consent(consent_type: str, granted: bool = True, current_user: dict = Depends(get_current_user)):
+    """DSGVO Art. 7 - Einwilligung speichern"""
+    now = datetime.now(timezone.utc).isoformat()
+    
+    consent = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "consent_type": consent_type,
+        "granted": granted,
+        "granted_at": now if granted else None,
+        "revoked_at": None if granted else now,
+        "ip_address": None,  # Optional: could capture IP
+        "user_agent": None   # Optional: could capture user agent
+    }
+    
+    # Upsert consent
+    await db.consents.update_one(
+        {"user_id": current_user["id"], "consent_type": consent_type},
+        {"$set": consent},
+        upsert=True
+    )
+    
+    await log_audit(
+        user=current_user,
+        action="create" if granted else "revoke",
+        resource_type="consent",
+        details=f"Einwilligung {'erteilt' if granted else 'verweigert'}: {consent_type}"
+    )
+    
+    return {"message": f"Einwilligung für '{consent_type}' wurde {'erteilt' if granted else 'verweigert'}"}
+
 @api_router.get("/gdpr/privacy-info")
 async def get_privacy_info():
     """DSGVO Art. 13/14 - Datenschutzinformationen"""
