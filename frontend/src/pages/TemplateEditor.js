@@ -121,6 +121,7 @@ export default function TemplateEditor() {
         description: template.description,
         template_type: template.template_type || "onboarding",
         tasks: template.tasks.map((t, i) => ({
+          id: t.id,  // Preserve task ID for dependency mapping
           title: t.title,
           description: t.description || "",
           category: t.category,
