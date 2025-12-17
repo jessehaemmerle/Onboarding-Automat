@@ -1888,12 +1888,21 @@ async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(g
     await db.cases.insert_one(case_doc)
     
     tasks = []
+    # Map template task IDs to new case task IDs for dependency resolution
+    template_to_case_task_id = {}
+    
+    # First pass: create all tasks and build the ID mapping
     for t in template.get("tasks", []):
         owner_email = await resolve_owner_email(t["owner_role"], current_user["organization_id"])
         # Positive offset = days BEFORE start date, negative = days AFTER
         due_date = start_date - timedelta(days=t["offset_days"])
+        new_task_id = str(uuid.uuid4())
+        template_task_id = t.get("id")
+        if template_task_id:
+            template_to_case_task_id[template_task_id] = new_task_id
+        
         task_doc = {
-            "id": str(uuid.uuid4()),
+            "id": new_task_id,
             "case_id": case_id,
             "organization_id": current_user["organization_id"],
             "title": t["title"],
@@ -1905,13 +1914,25 @@ async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(g
             "due_date": due_date.isoformat(),
             "status": "open",
             "evidence_required": t.get("evidence_required", False),
+            "depends_on": None,  # Will be resolved in second pass
             "completed_at": None,
             "completed_by": None,
             "created_at": now
         }
+        tasks.append((t, task_doc))
+    
+    # Second pass: resolve dependencies and insert tasks
+    final_tasks = []
+    for t, task_doc in tasks:
+        template_depends_on = t.get("depends_on")
+        if template_depends_on and template_depends_on in template_to_case_task_id:
+            task_doc["depends_on"] = template_to_case_task_id[template_depends_on]
         await db.tasks.insert_one(task_doc)
         task_doc["evidence_uploaded"] = False
-        tasks.append(task_doc)
+        task_doc["is_blocked"] = task_doc.get("depends_on") is not None  # Initially blocked if has dependency
+        final_tasks.append(task_doc)
+    
+    tasks = final_tasks
     
     case_doc["tasks"] = tasks
     return OnboardingCaseResponse(**case_doc)
