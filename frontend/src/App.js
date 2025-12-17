@@ -50,6 +50,8 @@ function App() {
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register-organization" element={<RegisterOrganization />} />
+          <Route path="/datenschutz" element={<Datenschutz />} />
+          <Route path="/impressum" element={<Impressum />} />
           
           {/* Admin Routes - Separate vom Rest der Anwendung */}
           <Route path="/admin/login" element={<AdminLogin />} />
