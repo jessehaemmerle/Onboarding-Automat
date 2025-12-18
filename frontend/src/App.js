@@ -49,6 +49,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Public Routes */}
+          <Route path="/home" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register-organization" element={<RegisterOrganization />} />
           <Route path="/datenschutz" element={<Datenschutz />} />
