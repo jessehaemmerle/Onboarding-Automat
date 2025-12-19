@@ -3167,10 +3167,12 @@ async def get_privacy_info():
 
 # Import and include new modular routers BEFORE adding to app
 from routers.tasks import router as tasks_router
+from routers.billing import router as billing_router, check_limit
 
 # Add new modular router endpoints to api_router
-# These add the evidence-policies endpoints
+# These add the evidence-policies and billing endpoints
 api_router.include_router(tasks_router)
+api_router.include_router(billing_router)
 
 # Include main router with all routes
 app.include_router(api_router)
