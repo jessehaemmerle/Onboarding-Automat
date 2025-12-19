@@ -527,8 +527,8 @@ export default function LandingPage() {
             Starten Sie noch heute und erleben Sie, wie einfach Onboarding sein kann.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" onClick={() => navigate("/register-organization")} className="gap-2">
-              Kostenlos registrieren <ArrowRight className="w-4 h-4" />
+            <Button size="lg" onClick={() => navigate("/kontakt")} className="gap-2">
+              Vertrieb kontaktieren <ArrowRight className="w-4 h-4" />
             </Button>
             <Button size="lg" variant="outline" onClick={() => navigate("/login")}>
               Anmelden
