@@ -1336,12 +1336,12 @@ async def org_update_user_status(user_id: str, new_status: str, current_user: di
         resource_type="user",
         resource_id=user_id,
         resource_name=user.get("email"),
-        details=f"Benutzer-Status geändert: {old_status} -> {status}",
+        details=f"Benutzer-Status geändert: {old_status} -> {new_status}",
         old_value=old_status,
-        new_value=status
+        new_value=new_status
     )
     
-    return {"message": f"Benutzer-Status auf '{status}' gesetzt", "user_id": user_id}
+    return {"message": f"Benutzer-Status auf '{new_status}' gesetzt", "user_id": user_id}
 
 @api_router.delete("/org/users/{user_id}")
 async def org_delete_user(user_id: str, current_user: dict = Depends(require_admin)):
