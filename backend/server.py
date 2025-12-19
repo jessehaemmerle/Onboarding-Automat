@@ -1885,6 +1885,13 @@ async def get_case(case_id: str, current_user: dict = Depends(get_current_user))
 
 @api_router.post("/cases", response_model=OnboardingCaseResponse)
 async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(get_current_user)):
+    # Check billing limit for cases
+    org_id = current_user.get("organization_id")
+    if org_id:
+        allowed, message = await check_limit(org_id, "cases", 1)
+        if not allowed:
+            raise HTTPException(status_code=403, detail=message)
+    
     query = {"id": data.template_id, **get_org_filter(current_user)}
     template = await db.templates.find_one(query, {"_id": 0})
     if not template:
