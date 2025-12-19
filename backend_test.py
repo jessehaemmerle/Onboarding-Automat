@@ -3554,11 +3554,12 @@ class OnboardingAutomatTester:
         return success_rate >= 80  # Consider 80%+ as success
 
 def main():
-    """Main test execution"""
+    """Main test execution - Focus on Evidence Policies as requested"""
     tester = OnboardingAutomatTester()
     
     try:
-        success = tester.run_all_tests()
+        # Run Evidence Policies focused tests as requested in review
+        success = tester.run_evidence_policies_tests()
         return 0 if success else 1
     except KeyboardInterrupt:
         print("\n⚠️ Tests interrupted by user")
