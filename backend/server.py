@@ -473,6 +473,16 @@ class AuditLogResponse(BaseModel):
     page: int
     page_size: int
 
+# ============ CONTACT/SALES MODELS ============
+
+class SalesContactRequest(BaseModel):
+    company: str
+    name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    employees: Optional[str] = None
+    message: Optional[str] = None
+
 # ============ DSGVO/GDPR MODELS ============
 
 class ConsentRecord(BaseModel):
