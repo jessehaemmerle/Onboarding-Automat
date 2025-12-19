@@ -2692,109 +2692,83 @@ async def submit_sales_contact(data: SalesContactRequest, background_tasks: Back
     return {"message": "Anfrage erfolgreich gesendet", "id": contact_request["id"]}
 
 async def send_sales_notification_email(contact_data: dict):
-    """Send email notification for new sales contact - using SMTP"""
-    import smtplib
-    from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
+    """Send email notification for new sales contact - using Resend"""
+    import resend
     
-    # Email settings - can be configured via environment variables
+    # Email settings
     SALES_EMAIL = "jesse@haemmerle.at"
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+    SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "onboarding@resend.dev")
     
-    # Try to send via SMTP if configured
-    smtp_host = os.environ.get("SMTP_HOST")
-    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
-    smtp_user = os.environ.get("SMTP_USER")
-    smtp_pass = os.environ.get("SMTP_PASSWORD")
-    
-    if not all([smtp_host, smtp_user, smtp_pass]):
-        # SMTP not configured - just log the request
-        logger.info(f"SMTP not configured. Sales contact saved: {contact_data['company']} - {contact_data['email']}")
+    if not RESEND_API_KEY or RESEND_API_KEY == "re_test_placeholder":
+        # Resend not configured - just log the request
+        logger.info(f"Resend not configured. Sales contact saved: {contact_data['company']} - {contact_data['email']}")
         return
     
-    try:
-        # Create email
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"[OnboardIQ] Neue Vertriebsanfrage von {contact_data['company']}"
-        msg["From"] = smtp_user
-        msg["To"] = SALES_EMAIL
-        
-        # Plain text version
-        text = f"""
-Neue Vertriebsanfrage über OnboardIQ:
-
-Unternehmen: {contact_data['company']}
-Name: {contact_data['name']}
-E-Mail: {contact_data['email']}
-Telefon: {contact_data.get('phone', '-')}
-Mitarbeiter: {contact_data.get('employees', '-')}
-
-Nachricht:
-{contact_data.get('message', '-')}
-
----
-Eingegangen am: {contact_data['created_at']}
-        """
-        
-        # HTML version
-        html = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 20px; border-radius: 8px 8px 0 0;">
-                    <h1 style="color: white; margin: 0; font-size: 24px;">⚡ OnboardIQ</h1>
-                    <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0;">Neue Vertriebsanfrage</p>
-                </div>
-                <div style="background: #f8fafc; padding: 20px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr>
-                            <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Unternehmen:</strong></td>
-                            <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">{contact_data['company']}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Name:</strong></td>
-                            <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">{contact_data['name']}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>E-Mail:</strong></td>
-                            <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><a href="mailto:{contact_data['email']}" style="color: #2563eb;">{contact_data['email']}</a></td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Telefon:</strong></td>
-                            <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">{contact_data.get('phone', '-')}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Mitarbeiter:</strong></td>
-                            <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">{contact_data.get('employees', '-')}</td>
-                        </tr>
-                    </table>
-                    <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
-                        <strong>Nachricht:</strong>
-                        <p style="margin: 10px 0 0 0; white-space: pre-wrap;">{contact_data.get('message', '-')}</p>
-                    </div>
-                    <p style="margin-top: 20px; font-size: 12px; color: #64748b;">
-                        Eingegangen am: {contact_data['created_at']}
-                    </p>
-                </div>
+    resend.api_key = RESEND_API_KEY
+    
+    # HTML email content
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 20px; border-radius: 8px 8px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">⚡ OnboardIQ</h1>
+                <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0;">Neue Vertriebsanfrage</p>
             </div>
-        </body>
-        </html>
-        """
+            <div style="background: #f8fafc; padding: 20px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Unternehmen:</strong></td>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">{contact_data['company']}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Name:</strong></td>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">{contact_data['name']}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>E-Mail:</strong></td>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><a href="mailto:{contact_data['email']}" style="color: #2563eb;">{contact_data['email']}</a></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Telefon:</strong></td>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">{contact_data.get('phone', '-')}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Mitarbeiter:</strong></td>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">{contact_data.get('employees', '-')}</td>
+                    </tr>
+                </table>
+                <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <strong>Nachricht:</strong>
+                    <p style="margin: 10px 0 0 0; white-space: pre-wrap;">{contact_data.get('message', '-')}</p>
+                </div>
+                <p style="margin-top: 20px; font-size: 12px; color: #64748b;">
+                    Eingegangen am: {contact_data['created_at']}
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    try:
+        # Send email via Resend (run sync SDK in thread)
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [SALES_EMAIL],
+            "subject": f"[OnboardIQ] Neue Vertriebsanfrage von {contact_data['company']}",
+            "html": html
+        }
         
-        msg.attach(MIMEText(text, "plain"))
-        msg.attach(MIMEText(html, "html"))
+        email_result = await asyncio.to_thread(resend.Emails.send, params)
         
-        # Send email
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.send_message(msg)
-        
-        logger.info(f"Sales notification email sent for {contact_data['company']}")
+        logger.info(f"Sales notification email sent for {contact_data['company']}, id: {email_result.get('id', 'unknown')}")
         
         # Update status in database
         await db.contact_requests.update_one(
             {"id": contact_data["id"]},
-            {"$set": {"status": "email_sent", "email_sent_at": datetime.now(timezone.utc).isoformat()}}
+            {"$set": {"status": "email_sent", "email_sent_at": datetime.now(timezone.utc).isoformat(), "resend_email_id": email_result.get('id')}}
         )
         
     except Exception as e:
