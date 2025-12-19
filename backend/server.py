@@ -2016,10 +2016,10 @@ async def reschedule_case(case_id: str, data: RescheduleRequest, current_user: d
 
 @api_router.patch("/cases/{case_id}/status")
 async def update_case_status(case_id: str, new_status: str, current_user: dict = Depends(get_current_user)):
-    if status not in ["active", "completed"]:
+    if new_status not in ["active", "completed"]:
         raise HTTPException(status_code=400, detail="Ungültiger Status")
     query = {"id": case_id, **get_org_filter(current_user)}
-    result = await db.cases.update_one(query, {"$set": {"status": status}})
+    result = await db.cases.update_one(query, {"$set": {"status": new_status}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Case nicht gefunden")
     return {"message": "Status aktualisiert"}
@@ -2097,7 +2097,7 @@ async def get_my_tasks(current_user: dict = Depends(get_current_user)):
 
 @api_router.patch("/tasks/{task_id}/status")
 async def update_task_status(task_id: str, new_status: str, current_user: dict = Depends(get_current_user)):
-    if status not in ["open", "done"]:
+    if new_status not in ["open", "done"]:
         raise HTTPException(status_code=400, detail="Ungültiger Status")
     
     # Check if task exists
@@ -2107,7 +2107,7 @@ async def update_task_status(task_id: str, new_status: str, current_user: dict =
         raise HTTPException(status_code=404, detail="Task nicht gefunden")
     
     # Check if task is blocked by a dependency
-    if status == "done" and task.get("depends_on"):
+    if new_status == "done" and task.get("depends_on"):
         dep_task = await db.tasks.find_one({"id": task["depends_on"]}, {"_id": 0, "status": 1, "title": 1})
         if dep_task and dep_task.get("status") != "done":
             raise HTTPException(
@@ -2116,13 +2116,13 @@ async def update_task_status(task_id: str, new_status: str, current_user: dict =
             )
     
     # Check if evidence is required and uploaded
-    if task.get("evidence_required") and status == "done":
+    if task.get("evidence_required") and new_status == "done":
         evidence_count = await db.evidence.count_documents({"task_id": task_id})
         if evidence_count == 0:
             raise HTTPException(status_code=400, detail="Nachweis erforderlich bevor der Task abgeschlossen werden kann")
     
-    update_data = {"status": status}
-    if status == "done":
+    update_data = {"status": new_status}
+    if new_status == "done":
         update_data["completed_at"] = datetime.now(timezone.utc).isoformat()
         update_data["completed_by"] = current_user["email"]
     else:
