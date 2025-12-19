@@ -17,6 +17,7 @@ import AuditLog from "./pages/AuditLog";
 import PrivacyCenter from "./pages/PrivacyCenter";
 import Datenschutz from "./pages/Datenschutz";
 import Impressum from "./pages/Impressum";
+import Kontakt from "./pages/Kontakt";
 import OrgUserManagement from "./pages/OrgUserManagement";
 import AdminPanel from "./pages/AdminPanel";
 import AdminLogin from "./pages/AdminLogin";
