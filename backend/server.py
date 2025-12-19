@@ -1781,8 +1781,8 @@ async def resolve_owner_email(owner_role: str, organization_id: str) -> str:
 @api_router.get("/cases", response_model=List[OnboardingCaseResponse])
 async def get_cases(case_status: Optional[str] = None, case_type: Optional[str] = None, current_user: dict = Depends(get_current_user)):
     query = get_org_filter(current_user)
-    if status:
-        query["status"] = status
+    if case_status:
+        query["status"] = case_status
     if case_type:
         query["case_type"] = case_type
     
