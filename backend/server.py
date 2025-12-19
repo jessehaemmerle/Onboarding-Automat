@@ -41,7 +41,7 @@ MASTER_ADMIN_KEY = os.environ.get('MASTER_ADMIN_KEY', 'change-this-master-key-in
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
-app = FastAPI(title="Onboarding-Automat API")
+app = FastAPI(title="OnboardIQ API")
 api_router = APIRouter(prefix="/api")
 
 # Configure logging
@@ -2372,7 +2372,7 @@ async def get_case_report(case_id: str, current_user: dict = Depends(get_current
         </div>
         
         <div class="footer">
-            <p>Erstellt am {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')} UTC • Onboarding-Automat</p>
+            <p>Erstellt am {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')} UTC • OnboardIQ</p>
         </div>
     </body>
     </html>
