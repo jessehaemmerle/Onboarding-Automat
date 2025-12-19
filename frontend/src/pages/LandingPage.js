@@ -97,8 +97,8 @@ export default function LandingPage() {
               <Button variant="ghost" onClick={() => navigate("/login")}>
                 Anmelden
               </Button>
-              <Button onClick={() => navigate("/register-organization")}>
-                Kostenlos starten
+              <Button onClick={() => navigate("/kontakt")}>
+                Vertrieb kontaktieren
               </Button>
             </div>
           </div>
