@@ -424,7 +424,7 @@ export default function LandingPage() {
                   <span className="text-slate-500 text-sm">/Monat</span>
                 </div>
                 <p className="text-xs text-slate-500 mb-4">€3,58 pro Benutzer</p>
-                <Button size="sm" className="w-full" onClick={() => navigate("/register-organization")}>
+                <Button size="sm" className="w-full" onClick={() => navigate("/kontakt")}>
                   Auswählen
                 </Button>
               </CardContent>
