@@ -363,3 +363,15 @@ agent_communication:
       - working: true
         agent: "testing"
         comment: "✅ CONTACT SALES FORM TESTING COMPLETED SUCCESSFULLY (100% success rate - 5/5 test cases passed): Comprehensive testing of all requested functionality completed. 1) ✅ PAGE LOADS CORRECTLY: /kontakt page loads with proper title 'Vertrieb kontaktieren', contact form visible, all required fields present (Unternehmen, Name, E-Mail, Telefon, Nachricht, Mitarbeiteranzahl dropdown). 2) ✅ FORM VALIDATION: Client-side validation working (required fields enforced by browser). 3) ✅ SUCCESSFUL FORM SUBMISSION: All test data filled correctly (Frontend Test GmbH, Test User, test@frontend.de, +49 999 888777, 26-50 Mitarbeiter, automated test message), form submission successful with proper API call to POST /api/contact/sales. 4) ✅ SUCCESS PAGE ELEMENTS: 'Anfrage gesendet!' title displayed, success message visible, 'Zurück zur Startseite' and 'Zur Anmeldung' buttons present and functional. 5) ✅ NAVIGATION: 'Zurück zur Startseite' button successfully navigates to /home. Backend logs confirm API request processed correctly: 'New sales contact request from Frontend Test GmbH (test@frontend.de)' with 200 OK response. Complete contact sales workflow is fully functional and ready for production use."
+
+  - task: "Post-Refactoring Critical Endpoints Verification"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ POST-REFACTORING CRITICAL ENDPOINTS TESTING COMPLETED SUCCESSFULLY (100% success rate - 8/8 tests passed): Comprehensive verification of all critical OnboardIQ Backend endpoints after refactoring. 1) ✅ GET /health - Health check endpoint working correctly (status: healthy, service: onboarding-automat), 2) ✅ POST /api/auth/login with admin@testfirma.de / Test123! - Admin authentication successful, proper token generation, 3) ✅ GET /api/auth/me with admin token - Returns correct user info (email: admin@testfirma.de, role: admin, org: Test Firma GmbH), 4) ✅ POST /api/auth/login with jesse@haemmerle.at / O!@Pr92HWrWYVeFJTp2@VNkV - Super-Admin login successful with is_super_admin: true flag, 5) ✅ GET /api/auth/me with Super-Admin token - Correctly returns is_super_admin: true, 6) ✅ POST /api/contact/sales with test data - Contact sales API working perfectly (response: 'Anfrage erfolgreich gesendet'), 7) ✅ GET /api/cases with admin token - Cases API functional, found 7 cases with proper case types (onboarding), 8) ✅ GET /api/templates with admin token - Templates API working, found 6 templates (5 onboarding, 1 rolechange). Backend logs confirm all requests processed correctly with proper audit logging. All main functionalities preserved after refactoring - system is fully operational."
