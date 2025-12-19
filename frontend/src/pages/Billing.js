@@ -86,6 +86,7 @@ export default function Billing() {
   };
 
   const formatLimit = (value) => {
+    if (value === undefined || value === null) return "—";
     if (value === -1) return "Unbegrenzt";
     return value.toLocaleString();
   };
