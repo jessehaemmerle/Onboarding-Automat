@@ -364,149 +364,154 @@ export default function LandingPage() {
               Preise & Lizenzen
             </Badge>
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">
-              Einfache, transparente Preisgestaltung
+              Einfache, nutzerbasierte Preisgestaltung
             </h2>
             <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
-              Wählen Sie den Plan, der zu Ihrem Unternehmen passt. Keine versteckten Kosten.
+              Zahlen Sie nur für die Benutzer, die Sie brauchen. Alle Features inklusive.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {/* Starter Plan */}
-            <Card className="border-2 border-slate-200 relative">
-              <CardContent className="p-8">
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Starter</h3>
-                <p className="text-slate-500 mb-6">Für kleine Teams</p>
-                <div className="mb-6">
-                  <span className="text-4xl font-bold text-slate-900">€49</span>
-                  <span className="text-slate-500">/Monat</span>
+          {/* Pricing Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-6xl mx-auto">
+            {/* 10 Users */}
+            <Card className="border-2 border-slate-200 hover:border-blue-300 transition-colors">
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-6 h-6 text-blue-600" />
                 </div>
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>Bis zu <strong>10 Benutzer</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>Unbegrenzte Onboardings</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>5 Templates</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>E-Mail-Support</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-slate-400">
-                    <Lock className="w-5 h-5 flex-shrink-0" />
-                    <span>Abteilungen</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-slate-400">
-                    <Lock className="w-5 h-5 flex-shrink-0" />
-                    <span>Audit-Log</span>
-                  </li>
-                </ul>
-                <Button variant="outline" className="w-full" onClick={() => navigate("/register-organization")}>
-                  Jetzt starten
+                <h3 className="text-lg font-bold text-slate-900 mb-1">10 Benutzer</h3>
+                <div className="mb-4">
+                  <span className="text-3xl font-bold text-slate-900">€49</span>
+                  <span className="text-slate-500 text-sm">/Monat</span>
+                </div>
+                <p className="text-xs text-slate-500 mb-4">€4,90 pro Benutzer</p>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/register-organization")}>
+                  Auswählen
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Professional Plan - Recommended */}
-            <Card className="border-2 border-blue-500 relative shadow-xl scale-105">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <Badge className="bg-blue-600 text-white hover:bg-blue-600 px-4 py-1">
-                  Empfohlen
-                </Badge>
+            {/* 25 Users */}
+            <Card className="border-2 border-slate-200 hover:border-blue-300 transition-colors">
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-1">25 Benutzer</h3>
+                <div className="mb-4">
+                  <span className="text-3xl font-bold text-slate-900">€99</span>
+                  <span className="text-slate-500 text-sm">/Monat</span>
+                </div>
+                <p className="text-xs text-slate-500 mb-4">€3,96 pro Benutzer</p>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/register-organization")}>
+                  Auswählen
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* 50 Users - Popular */}
+            <Card className="border-2 border-blue-500 shadow-lg relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <Badge className="bg-blue-600 text-white hover:bg-blue-600 text-xs">Beliebt</Badge>
               </div>
-              <CardContent className="p-8">
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Professional</h3>
-                <p className="text-slate-500 mb-6">Für wachsende Unternehmen</p>
-                <div className="mb-6">
-                  <span className="text-4xl font-bold text-slate-900">€149</span>
-                  <span className="text-slate-500">/Monat</span>
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-6 h-6 text-white" />
                 </div>
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>Bis zu <strong>50 Benutzer</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>Unbegrenzte Onboardings</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>Unbegrenzte Templates</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span><strong>Abteilungen & Rollen</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span><strong>Vollständiges Audit-Log</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>Prioritäts-Support</span>
-                  </li>
-                </ul>
-                <Button className="w-full" onClick={() => navigate("/register-organization")}>
-                  Jetzt starten
+                <h3 className="text-lg font-bold text-slate-900 mb-1">50 Benutzer</h3>
+                <div className="mb-4">
+                  <span className="text-3xl font-bold text-slate-900">€179</span>
+                  <span className="text-slate-500 text-sm">/Monat</span>
+                </div>
+                <p className="text-xs text-slate-500 mb-4">€3,58 pro Benutzer</p>
+                <Button size="sm" className="w-full" onClick={() => navigate("/register-organization")}>
+                  Auswählen
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Enterprise Plan */}
-            <Card className="border-2 border-slate-200 relative">
-              <CardContent className="p-8">
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Enterprise</h3>
-                <p className="text-slate-500 mb-6">Für große Organisationen</p>
-                <div className="mb-6">
-                  <span className="text-4xl font-bold text-slate-900">Individuell</span>
+            {/* 100 Users */}
+            <Card className="border-2 border-slate-200 hover:border-blue-300 transition-colors">
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-6 h-6 text-blue-600" />
                 </div>
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span><strong>Unbegrenzte Benutzer</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>Alles aus Professional</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span><strong>SSO-Integration</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span><strong>API-Zugang</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span><strong>Dedizierter Account Manager</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>SLA-Garantie</span>
-                  </li>
-                </ul>
-                <Button variant="outline" className="w-full">
-                  Kontakt aufnehmen
+                <h3 className="text-lg font-bold text-slate-900 mb-1">100 Benutzer</h3>
+                <div className="mb-4">
+                  <span className="text-3xl font-bold text-slate-900">€299</span>
+                  <span className="text-slate-500 text-sm">/Monat</span>
+                </div>
+                <p className="text-xs text-slate-500 mb-4">€2,99 pro Benutzer</p>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/register-organization")}>
+                  Auswählen
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Unlimited Users */}
+            <Card className="border-2 border-slate-200 hover:border-blue-300 transition-colors">
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Zap className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-1">Unbegrenzt</h3>
+                <div className="mb-4">
+                  <span className="text-3xl font-bold text-slate-900">€499</span>
+                  <span className="text-slate-500 text-sm">/Monat</span>
+                </div>
+                <p className="text-xs text-slate-500 mb-4">Keine Limits</p>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/register-organization")}>
+                  Auswählen
                 </Button>
               </CardContent>
             </Card>
           </div>
 
-          {/* FAQ teaser */}
-          <div className="mt-16 text-center">
-            <p className="text-slate-600">
-              Alle Pläne beinhalten: <strong>DSGVO-Konformität</strong>, <strong>SSL-Verschlüsselung</strong>, <strong>Tägliche Backups</strong>
-            </p>
-            <p className="text-slate-500 mt-2 text-sm">
-              Lizenzschlüssel erforderlich. Kontaktieren Sie uns für eine Demo.
+          {/* All features included */}
+          <div className="mt-16 max-w-4xl mx-auto">
+            <h3 className="text-center text-lg font-semibold text-slate-900 mb-8">
+              Alle Lizenzen beinhalten:
+            </h3>
+            <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <span>Unbegrenzte Onboardings</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <span>Unbegrenzte Templates</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <span>Abteilungen & Rollen</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <span>Task-Abhängigkeiten</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <span>Vollständiges Audit-Log</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <span>DSGVO-Konformität</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <span>Privacy Center</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <span>E-Mail-Support</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Contact note */}
+          <div className="mt-12 text-center">
+            <p className="text-slate-500 text-sm">
+              Lizenzschlüssel erforderlich. <a href="mailto:kontakt@onboardiq.de" className="text-blue-600 hover:underline">Kontaktieren Sie uns</a> für eine Demo oder individuelle Anfragen.
             </p>
           </div>
         </div>
