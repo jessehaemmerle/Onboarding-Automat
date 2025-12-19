@@ -356,6 +356,162 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section className="py-20 px-4 bg-slate-50" id="pricing">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">
+              Preise & Lizenzen
+            </Badge>
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">
+              Einfache, transparente Preisgestaltung
+            </h2>
+            <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
+              Wählen Sie den Plan, der zu Ihrem Unternehmen passt. Keine versteckten Kosten.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* Starter Plan */}
+            <Card className="border-2 border-slate-200 relative">
+              <CardContent className="p-8">
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Starter</h3>
+                <p className="text-slate-500 mb-6">Für kleine Teams</p>
+                <div className="mb-6">
+                  <span className="text-4xl font-bold text-slate-900">€49</span>
+                  <span className="text-slate-500">/Monat</span>
+                </div>
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>Bis zu <strong>10 Benutzer</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>Unbegrenzte Onboardings</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>5 Templates</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>E-Mail-Support</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-slate-400">
+                    <Lock className="w-5 h-5 flex-shrink-0" />
+                    <span>Abteilungen</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-slate-400">
+                    <Lock className="w-5 h-5 flex-shrink-0" />
+                    <span>Audit-Log</span>
+                  </li>
+                </ul>
+                <Button variant="outline" className="w-full" onClick={() => navigate("/register-organization")}>
+                  Jetzt starten
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Professional Plan - Recommended */}
+            <Card className="border-2 border-blue-500 relative shadow-xl scale-105">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <Badge className="bg-blue-600 text-white hover:bg-blue-600 px-4 py-1">
+                  Empfohlen
+                </Badge>
+              </div>
+              <CardContent className="p-8">
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Professional</h3>
+                <p className="text-slate-500 mb-6">Für wachsende Unternehmen</p>
+                <div className="mb-6">
+                  <span className="text-4xl font-bold text-slate-900">€149</span>
+                  <span className="text-slate-500">/Monat</span>
+                </div>
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>Bis zu <strong>50 Benutzer</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>Unbegrenzte Onboardings</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>Unbegrenzte Templates</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span><strong>Abteilungen & Rollen</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span><strong>Vollständiges Audit-Log</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>Prioritäts-Support</span>
+                  </li>
+                </ul>
+                <Button className="w-full" onClick={() => navigate("/register-organization")}>
+                  Jetzt starten
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Enterprise Plan */}
+            <Card className="border-2 border-slate-200 relative">
+              <CardContent className="p-8">
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Enterprise</h3>
+                <p className="text-slate-500 mb-6">Für große Organisationen</p>
+                <div className="mb-6">
+                  <span className="text-4xl font-bold text-slate-900">Individuell</span>
+                </div>
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span><strong>Unbegrenzte Benutzer</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>Alles aus Professional</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span><strong>SSO-Integration</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span><strong>API-Zugang</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span><strong>Dedizierter Account Manager</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>SLA-Garantie</span>
+                  </li>
+                </ul>
+                <Button variant="outline" className="w-full">
+                  Kontakt aufnehmen
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* FAQ teaser */}
+          <div className="mt-16 text-center">
+            <p className="text-slate-600">
+              Alle Pläne beinhalten: <strong>DSGVO-Konformität</strong>, <strong>SSL-Verschlüsselung</strong>, <strong>Tägliche Backups</strong>
+            </p>
+            <p className="text-slate-500 mt-2 text-sm">
+              Lizenzschlüssel erforderlich. Kontaktieren Sie uns für eine Demo.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
@@ -363,7 +519,7 @@ export default function LandingPage() {
             Bereit für effizientere HR-Prozesse?
           </h2>
           <p className="text-lg text-slate-600 mb-8">
-            Starten Sie noch heute kostenlos und erleben Sie, wie einfach Onboarding sein kann.
+            Starten Sie noch heute und erleben Sie, wie einfach Onboarding sein kann.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" onClick={() => navigate("/register-organization")} className="gap-2">
