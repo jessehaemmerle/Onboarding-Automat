@@ -385,7 +385,7 @@ export default function LandingPage() {
                   <span className="text-slate-500 text-sm">/Monat</span>
                 </div>
                 <p className="text-xs text-slate-500 mb-4">€4,90 pro Benutzer</p>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/register-organization")}>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/kontakt")}>
                   Auswählen
                 </Button>
               </CardContent>
@@ -403,7 +403,7 @@ export default function LandingPage() {
                   <span className="text-slate-500 text-sm">/Monat</span>
                 </div>
                 <p className="text-xs text-slate-500 mb-4">€3,96 pro Benutzer</p>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/register-organization")}>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/kontakt")}>
                   Auswählen
                 </Button>
               </CardContent>
@@ -442,7 +442,7 @@ export default function LandingPage() {
                   <span className="text-slate-500 text-sm">/Monat</span>
                 </div>
                 <p className="text-xs text-slate-500 mb-4">€2,99 pro Benutzer</p>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/register-organization")}>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/kontakt")}>
                   Auswählen
                 </Button>
               </CardContent>
@@ -460,7 +460,7 @@ export default function LandingPage() {
                   <span className="text-slate-500 text-sm">/Monat</span>
                 </div>
                 <p className="text-xs text-slate-500 mb-4">Keine Limits</p>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/register-organization")}>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/kontakt")}>
                   Auswählen
                 </Button>
               </CardContent>
