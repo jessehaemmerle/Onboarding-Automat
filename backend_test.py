@@ -1593,6 +1593,215 @@ class OnboardingAutomatTester:
         self.log("✅ Settings APIs testing completed")
         return True
 
+    def test_billing_monetization_system(self):
+        """Test OnboardIQ Backend Billing/Monetization System"""
+        self.log("\n=== TESTING ONBOARDIQ BACKEND BILLING/MONETIZATION SYSTEM ===")
+        
+        # Login with provided test credentials
+        success, response = self.run_test(
+            "Login with admin@testfirma.de for Billing testing",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "admin@testfirma.de", "password": "Test123!"}
+        )
+        
+        if not success or 'access_token' not in response:
+            self.log("❌ Could not login with admin@testfirma.de credentials")
+            return False
+        
+        # Store original token and use admin token
+        original_token = self.token
+        self.token = response['access_token']
+        admin_user = response.get('user', {})
+        
+        self.log(f"✅ Logged in as {admin_user.get('email')} for Billing system testing")
+        
+        # Test 1: GET /api/billing/tiers - All pricing tiers (should return 5 tiers)
+        success, response = self.run_test(
+            "1. GET /api/billing/tiers - Get all pricing tiers",
+            "GET",
+            "billing/tiers",
+            200
+        )
+        
+        if success and response:
+            tiers = response
+            self.log(f"✅ Found {len(tiers)} pricing tiers")
+            
+            # Verify we have exactly 5 tiers as expected
+            if len(tiers) == 5:
+                self.log("✅ Correct number of tiers (5) returned")
+                tier_names = [tier.get('name', 'Unknown') for tier in tiers]
+                self.log(f"   Tiers: {', '.join(tier_names)}")
+                
+                # Show details for each tier
+                for tier in tiers:
+                    name = tier.get('name', 'Unknown')
+                    user_limit = tier.get('user_limit', 0)
+                    price_monthly = tier.get('price_monthly', 0)
+                    self.log(f"   - {name}: {user_limit} users, €{price_monthly}/month")
+            else:
+                self.log(f"❌ Expected 5 tiers, got {len(tiers)}")
+        
+        # Test 2: GET /api/billing/usage - Usage tracking (users, cases, storage, templates limits)
+        success, response = self.run_test(
+            "2. GET /api/billing/usage - Get usage data",
+            "GET",
+            "billing/usage",
+            200
+        )
+        
+        if success and response:
+            usage = response
+            self.log("✅ Usage data retrieved successfully")
+            
+            # Check required usage fields
+            required_fields = ['users', 'cases', 'storage', 'templates', 'tier', 'tier_name', 'subscription_status']
+            missing_fields = [field for field in required_fields if field not in usage]
+            
+            if not missing_fields:
+                self.log("✅ All required usage fields present")
+                
+                # Display usage details
+                users = usage.get('users', {})
+                cases = usage.get('cases', {})
+                storage = usage.get('storage', {})
+                templates = usage.get('templates', {})
+                
+                self.log(f"   Users: {users.get('current', 0)}/{users.get('limit', 0)} ({users.get('percentage', 0)}%)")
+                self.log(f"   Cases: {cases.get('current', 0)}/{cases.get('limit', 0)} ({cases.get('percentage', 0)}%)")
+                self.log(f"   Storage: {storage.get('current_mb', 0)}/{storage.get('limit_mb', 0)} MB ({storage.get('percentage', 0)}%)")
+                self.log(f"   Templates: {templates.get('current', 0)}/{templates.get('limit', 0)} ({templates.get('percentage', 0)}%)")
+                self.log(f"   Current Tier: {usage.get('tier_name', 'Unknown')} ({usage.get('tier', 'unknown')})")
+                self.log(f"   Subscription Status: {usage.get('subscription_status', 'unknown')}")
+            else:
+                self.log(f"❌ Missing usage fields: {missing_fields}")
+        
+        # Test 3: GET /api/billing/subscription - Subscription details
+        success, response = self.run_test(
+            "3. GET /api/billing/subscription - Get subscription details",
+            "GET",
+            "billing/subscription",
+            200
+        )
+        
+        if success and response:
+            subscription = response
+            self.log("✅ Subscription details retrieved successfully")
+            
+            # Display subscription details
+            tier = subscription.get('tier', 'unknown')
+            tier_name = subscription.get('tier_name', 'Unknown')
+            status = subscription.get('status', 'unknown')
+            billing_cycle = subscription.get('billing_cycle', 'unknown')
+            price_monthly = subscription.get('price_monthly', 0)
+            price_yearly = subscription.get('price_yearly', 0)
+            features = subscription.get('features', [])
+            
+            self.log(f"   Tier: {tier_name} ({tier})")
+            self.log(f"   Status: {status}")
+            self.log(f"   Billing: {billing_cycle}")
+            self.log(f"   Pricing: €{price_monthly}/month, €{price_yearly}/year")
+            self.log(f"   Features: {len(features)} features included")
+        
+        # Test 4: POST /api/billing/check-limit with resource="users" - Check user limit
+        success, response = self.run_test(
+            "4. POST /api/billing/check-limit - Check user limit",
+            "POST",
+            "billing/check-limit",
+            200,
+            data={"resource": "users", "amount": 1}
+        )
+        
+        if success and response:
+            limit_check = response
+            allowed = limit_check.get('allowed', False)
+            message = limit_check.get('message', 'No message')
+            
+            self.log(f"✅ User limit check: {'Allowed' if allowed else 'Blocked'}")
+            self.log(f"   Message: {message}")
+        
+        # Test 5: POST /api/billing/check-limit with resource="cases" - Check case limit
+        success, response = self.run_test(
+            "5. POST /api/billing/check-limit - Check case limit",
+            "POST",
+            "billing/check-limit",
+            200,
+            data={"resource": "cases", "amount": 1}
+        )
+        
+        if success and response:
+            limit_check = response
+            allowed = limit_check.get('allowed', False)
+            message = limit_check.get('message', 'No message')
+            
+            self.log(f"✅ Case limit check: {'Allowed' if allowed else 'Blocked'}")
+            self.log(f"   Message: {message}")
+        
+        # Test 6: POST /api/billing/upgrade with new_tier="business" - Upgrade request
+        success, response = self.run_test(
+            "6. POST /api/billing/upgrade - Request upgrade to business tier",
+            "POST",
+            "billing/upgrade",
+            200,
+            data={"new_tier": "business", "billing_cycle": "monthly"}
+        )
+        
+        if success and response:
+            upgrade_response = response
+            message = upgrade_response.get('message', 'No message')
+            request_id = upgrade_response.get('request_id', 'No ID')
+            new_tier = upgrade_response.get('new_tier', 'unknown')
+            price = upgrade_response.get('price', 0)
+            billing_cycle = upgrade_response.get('billing_cycle', 'unknown')
+            
+            self.log("✅ Upgrade request created successfully")
+            self.log(f"   Message: {message}")
+            self.log(f"   Request ID: {request_id}")
+            self.log(f"   New Tier: {new_tier}")
+            self.log(f"   Price: €{price} ({billing_cycle})")
+        
+        # Additional Test: Check storage limit
+        success, response = self.run_test(
+            "7. POST /api/billing/check-limit - Check storage limit",
+            "POST",
+            "billing/check-limit",
+            200,
+            data={"resource": "storage", "amount": 100}  # 100 MB
+        )
+        
+        if success and response:
+            limit_check = response
+            allowed = limit_check.get('allowed', False)
+            message = limit_check.get('message', 'No message')
+            
+            self.log(f"✅ Storage limit check: {'Allowed' if allowed else 'Blocked'}")
+            self.log(f"   Message: {message}")
+        
+        # Additional Test: Check templates limit
+        success, response = self.run_test(
+            "8. POST /api/billing/check-limit - Check templates limit",
+            "POST",
+            "billing/check-limit",
+            200,
+            data={"resource": "templates", "amount": 1}
+        )
+        
+        if success and response:
+            limit_check = response
+            allowed = limit_check.get('allowed', False)
+            message = limit_check.get('message', 'No message')
+            
+            self.log(f"✅ Templates limit check: {'Allowed' if allowed else 'Blocked'}")
+            self.log(f"   Message: {message}")
+        
+        # Restore original token
+        self.token = original_token
+        
+        self.log("✅ OnboardIQ Backend Billing/Monetization System testing completed")
+        return True
+
     def test_gdpr_compliance_features(self):
         """Test comprehensive GDPR/DSGVO compliance features"""
         self.log("\n=== TESTING GDPR/DSGVO COMPLIANCE FEATURES ===")
