@@ -3459,6 +3459,15 @@ class OnboardingAutomatTester:
         
         # Run all test suites
         test_suites = [
+            # Core Authentication Tests
+            self.test_auth_flow,  # Basic auth with admin@testfirma.de / Test123!
+            
+            # NEW EVIDENCE POLICIES FEATURE TESTS (as requested in review)
+            self.test_evidence_policies_api,  # Test Evidence Policies CRUD API
+            self.test_tasks_evidence_with_policy_validation,  # Test Evidence API with Policy Validation
+            self.test_settings_apis,  # Test Settings APIs (owner-roles, categories, departments)
+            
+            # Existing Feature Tests
             self.test_seed_data,
             self.test_super_admin_auth,  # Test Super-Admin functionality with new endpoints
             self.test_departments_crud_api,  # Test Departments CRUD API - NEW FEATURE
@@ -3478,7 +3487,6 @@ class OnboardingAutomatTester:
             self.test_evidence_upload,
             self.test_tasks,
             self.test_dashboard_with_rolechanges,
-            self.test_settings,
             self.test_users,
             self.test_audit_logs,
             self.test_gdpr_compliance_features,
