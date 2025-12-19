@@ -185,9 +185,8 @@ class BillingTester:
         success, response = self.run_test(
             "4. POST /api/billing/check-limit - Check user limit",
             "POST",
-            "billing/check-limit",
-            200,
-            data={"resource": "users", "amount": 1}
+            "billing/check-limit?resource=users&amount=1",
+            200
         )
         
         if success and response:
@@ -202,9 +201,8 @@ class BillingTester:
         success, response = self.run_test(
             "5. POST /api/billing/check-limit - Check case limit",
             "POST",
-            "billing/check-limit",
-            200,
-            data={"resource": "cases", "amount": 1}
+            "billing/check-limit?resource=cases&amount=1",
+            200
         )
         
         if success and response:
@@ -242,9 +240,8 @@ class BillingTester:
         success, response = self.run_test(
             "7. POST /api/billing/check-limit - Check storage limit",
             "POST",
-            "billing/check-limit",
-            200,
-            data={"resource": "storage", "amount": 100}  # 100 MB
+            "billing/check-limit?resource=storage&amount=100",
+            200
         )
         
         if success and response:
@@ -259,9 +256,8 @@ class BillingTester:
         success, response = self.run_test(
             "8. POST /api/billing/check-limit - Check templates limit",
             "POST",
-            "billing/check-limit",
-            200,
-            data={"resource": "templates", "amount": 1}
+            "billing/check-limit?resource=templates&amount=1",
+            200
         )
         
         if success and response:
