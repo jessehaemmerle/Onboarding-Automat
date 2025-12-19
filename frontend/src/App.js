@@ -14,6 +14,7 @@ import Templates from "./pages/Templates";
 import TemplateEditor from "./pages/TemplateEditor";
 import Settings from "./pages/Settings";
 import EvidencePolicies from "./pages/EvidencePolicies";
+import Billing from "./pages/Billing";
 import AuditLog from "./pages/AuditLog";
 import PrivacyCenter from "./pages/PrivacyCenter";
 import Datenschutz from "./pages/Datenschutz";
@@ -81,6 +82,7 @@ function App() {
             <Route path="templates/new" element={<TemplateEditor />} />
             <Route path="settings" element={<Settings />} />
             <Route path="evidence-policies" element={<EvidencePolicies />} />
+            <Route path="billing" element={<Billing />} />
             <Route path="user-management" element={<OrgUserManagement />} />
             <Route path="audit-log" element={<AuditLog />} />
             <Route path="privacy" element={<PrivacyCenter />} />

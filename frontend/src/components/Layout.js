@@ -35,6 +35,7 @@ export default function Layout() {
   const adminNavItems = isAdmin ? [
     { to: "/user-management", label: "Benutzerverwaltung", icon: Users },
     { to: "/evidence-policies", label: "Nachweis-Richtlinien", icon: Shield },
+    { to: "/billing", label: "Abrechnung", icon: CreditCard },
   ] : [];
 
   return (
