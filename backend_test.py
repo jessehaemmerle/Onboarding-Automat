@@ -1165,6 +1165,434 @@ class OnboardingAutomatTester:
         
         return success
 
+    def test_evidence_policies_api(self):
+        """Test Evidence Policies API endpoints (NEW FEATURE)"""
+        self.log("\n=== TESTING EVIDENCE POLICIES API (NEW FEATURE) ===")
+        
+        # First, login with the provided test credentials
+        success, response = self.run_test(
+            "Login with admin@testfirma.de for Evidence Policies testing",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "admin@testfirma.de", "password": "Test123!"}
+        )
+        
+        if not success or 'access_token' not in response:
+            self.log("❌ Could not login with admin@testfirma.de credentials")
+            return False
+        
+        # Store original token and use admin token
+        original_token = self.token
+        self.token = response['access_token']
+        admin_user = response.get('user', {})
+        
+        self.log(f"✅ Logged in as {admin_user.get('email')} for Evidence Policies testing")
+        
+        # Test 1: GET /api/evidence-policies - List all evidence policies
+        success, response = self.run_test(
+            "1. GET /api/evidence-policies - List evidence policies",
+            "GET",
+            "evidence-policies",
+            200
+        )
+        
+        initial_policies = []
+        if success and response:
+            initial_policies = response
+            self.log(f"✅ Found {len(initial_policies)} existing evidence policies")
+            for policy in initial_policies:
+                self.log(f"   - {policy.get('name', 'Unknown')} (Max size: {policy.get('max_file_size_mb', 0)}MB)")
+        
+        # Test 2: GET /api/evidence-policies/default - Get default settings
+        success, response = self.run_test(
+            "2. GET /api/evidence-policies/default - Get default settings",
+            "GET",
+            "evidence-policies/default",
+            200
+        )
+        
+        default_settings = {}
+        if success and response:
+            default_settings = response
+            self.log("✅ Default evidence policy settings retrieved")
+            self.log(f"   Max file size: {default_settings.get('max_file_size_mb', 0)}MB")
+            self.log(f"   Allowed file types: {len(default_settings.get('allowed_file_types', []))}")
+            self.log(f"   Min files required: {default_settings.get('min_files_required', 0)}")
+            self.log(f"   Max files allowed: {default_settings.get('max_files_allowed', 0)}")
+        
+        # Test 3: POST /api/evidence-policies - Create new evidence policy
+        new_policy_data = {
+            "name": "Test Evidence Policy",
+            "description": "Test policy for automated testing",
+            "allowed_file_types": ["application/pdf", "image/jpeg", "image/png"],
+            "max_file_size_mb": 5,
+            "min_files_required": 1,
+            "max_files_allowed": 5,
+            "require_description": True,
+            "auto_approve": False,
+            "notify_on_upload": True,
+            "retention_days": 730
+        }
+        
+        success, response = self.run_test(
+            "3. POST /api/evidence-policies - Create new evidence policy",
+            "POST",
+            "evidence-policies",
+            200,
+            data=new_policy_data
+        )
+        
+        created_policy_id = None
+        if success and response:
+            created_policy_id = response.get('id')
+            policy_name = response.get('name')
+            max_size = response.get('max_file_size_mb')
+            
+            if created_policy_id and policy_name == "Test Evidence Policy" and max_size == 5:
+                self.log(f"✅ Evidence policy created successfully with ID: {created_policy_id}")
+                self.log(f"   Name: {policy_name}")
+                self.log(f"   Max size: {max_size}MB")
+                self.log(f"   Require description: {response.get('require_description')}")
+                self.log(f"   Auto approve: {response.get('auto_approve')}")
+            else:
+                self.log(f"❌ Evidence policy creation response invalid: {response}")
+        
+        # Test 4: Verify policy appears in list
+        success, response = self.run_test(
+            "4. GET /api/evidence-policies - Verify new policy in list",
+            "GET",
+            "evidence-policies",
+            200
+        )
+        
+        if success and response:
+            updated_policies = response
+            found_new_policy = any(policy.get('id') == created_policy_id for policy in updated_policies)
+            
+            if found_new_policy and len(updated_policies) == len(initial_policies) + 1:
+                self.log(f"✅ New policy appears in list ({len(updated_policies)} total policies)")
+            else:
+                self.log(f"❌ New policy not found in list or count mismatch")
+        
+        # Test 5: PUT /api/evidence-policies/{id} - Update evidence policy
+        if created_policy_id:
+            updated_policy_data = {
+                "name": "Updated Test Evidence Policy",
+                "description": "Updated test policy for automated testing",
+                "allowed_file_types": ["application/pdf", "image/jpeg", "image/png", "image/gif"],
+                "max_file_size_mb": 8,
+                "min_files_required": 2,
+                "max_files_allowed": 8,
+                "require_description": False,
+                "auto_approve": True,
+                "notify_on_upload": False,
+                "retention_days": 1095
+            }
+            
+            success, response = self.run_test(
+                "5. PUT /api/evidence-policies/{id} - Update evidence policy",
+                "PUT",
+                f"evidence-policies/{created_policy_id}",
+                200,
+                data=updated_policy_data
+            )
+            
+            if success and response:
+                updated_name = response.get('name')
+                updated_size = response.get('max_file_size_mb')
+                updated_at = response.get('updated_at')
+                
+                if updated_name == "Updated Test Evidence Policy" and updated_size == 8 and updated_at:
+                    self.log("✅ Evidence policy updated successfully")
+                    self.log(f"   Updated name: {updated_name}")
+                    self.log(f"   Updated max size: {updated_size}MB")
+                    self.log(f"   Updated at: {updated_at}")
+                else:
+                    self.log(f"❌ Evidence policy update failed: {response}")
+        
+        # Test 6: Verify update appears in list
+        success, response = self.run_test(
+            "6. GET /api/evidence-policies - Verify policy update",
+            "GET",
+            "evidence-policies",
+            200
+        )
+        
+        if success and response:
+            policies = response
+            updated_policy = next((policy for policy in policies if policy.get('id') == created_policy_id), None)
+            
+            if updated_policy and updated_policy.get('name') == "Updated Test Evidence Policy":
+                self.log("✅ Policy update verified in list")
+            else:
+                self.log("❌ Policy update not reflected in list")
+        
+        # Test 7: DELETE /api/evidence-policies/{id} - Delete evidence policy
+        if created_policy_id:
+            success, response = self.run_test(
+                "7. DELETE /api/evidence-policies/{id} - Delete evidence policy",
+                "DELETE",
+                f"evidence-policies/{created_policy_id}",
+                200
+            )
+            
+            if success:
+                self.log("✅ Evidence policy deleted successfully")
+                
+                # Verify deletion
+                success, response = self.run_test(
+                    "8. GET /api/evidence-policies - Verify policy deletion",
+                    "GET",
+                    "evidence-policies",
+                    200
+                )
+                
+                if success and response:
+                    final_policies = response
+                    deleted_policy = next((policy for policy in final_policies if policy.get('id') == created_policy_id), None)
+                    
+                    if not deleted_policy and len(final_policies) == len(initial_policies):
+                        self.log("✅ Policy deletion verified - policy removed from list")
+                    else:
+                        self.log("❌ Policy deletion not verified - policy still in list")
+        
+        # Test 8: Test invalid policy operations
+        success, response = self.run_test(
+            "9. PUT /api/evidence-policies/non-existent - Update non-existent policy",
+            "PUT",
+            "evidence-policies/non-existent-id",
+            404,  # Should return not found
+            data={"name": "Test", "max_file_size_mb": 10}
+        )
+        
+        if success:
+            self.log("✅ Non-existent policy update properly rejected")
+        
+        success, response = self.run_test(
+            "10. DELETE /api/evidence-policies/non-existent - Delete non-existent policy",
+            "DELETE",
+            "evidence-policies/non-existent-id",
+            404  # Should return not found
+        )
+        
+        if success:
+            self.log("✅ Non-existent policy deletion properly rejected")
+        
+        # Restore original token
+        self.token = original_token
+        
+        self.log("✅ Evidence Policies API testing completed")
+        return True
+
+    def test_tasks_evidence_with_policy_validation(self):
+        """Test Tasks/Evidence API with Policy Validation"""
+        self.log("\n=== TESTING TASKS/EVIDENCE API WITH POLICY VALIDATION ===")
+        
+        # Login with admin credentials
+        success, response = self.run_test(
+            "Login for Tasks/Evidence testing",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "admin@testfirma.de", "password": "Test123!"}
+        )
+        
+        if not success or 'access_token' not in response:
+            self.log("❌ Could not login for Tasks/Evidence testing")
+            return False
+        
+        # Store original token and use admin token
+        original_token = self.token
+        self.token = response['access_token']
+        
+        # First, we need to find a task to test with
+        # Get all cases to find tasks
+        success, response = self.run_test(
+            "Get cases to find tasks for evidence testing",
+            "GET",
+            "cases",
+            200
+        )
+        
+        test_task_id = None
+        if success and response:
+            cases = response
+            for case in cases:
+                tasks = case.get('tasks', [])
+                if tasks:
+                    test_task_id = tasks[0]['id']
+                    self.log(f"✅ Found task for testing: {test_task_id}")
+                    break
+        
+        if not test_task_id:
+            self.log("❌ No tasks found for evidence testing")
+            self.token = original_token
+            return False
+        
+        # Test 1: GET /api/tasks/{task_id}/evidence - Get evidence for task
+        success, response = self.run_test(
+            f"1. GET /api/tasks/{test_task_id}/evidence - Get task evidence",
+            "GET",
+            f"tasks/{test_task_id}/evidence",
+            200
+        )
+        
+        initial_evidence = []
+        if success and response:
+            initial_evidence = response
+            self.log(f"✅ Found {len(initial_evidence)} existing evidence files for task")
+            for evidence in initial_evidence:
+                self.log(f"   - {evidence.get('filename', 'Unknown')} ({evidence.get('file_size', 0)} bytes)")
+        
+        # Test 2: Test policy validation during upload (simulated)
+        # Note: We can't easily test actual file upload in this test framework,
+        # but we can test the endpoint exists and returns appropriate responses
+        
+        # Test that the upload endpoint exists and validates properly
+        self.log("2. Testing evidence upload endpoint validation")
+        
+        # Try to upload without file (should fail)
+        success, response = self.run_test(
+            "2a. POST /api/tasks/{task_id}/evidence - Upload without file (should fail)",
+            "POST",
+            f"tasks/{test_task_id}/evidence",
+            422  # Should return validation error
+        )
+        
+        if success:
+            self.log("✅ Evidence upload endpoint properly validates missing file")
+        else:
+            # The endpoint might return different status codes, let's check if it exists
+            success, response = self.run_test(
+                "2b. Check evidence upload endpoint exists",
+                "POST",
+                f"tasks/{test_task_id}/evidence",
+                400  # Might return 400 for missing file
+            )
+            if success:
+                self.log("✅ Evidence upload endpoint exists and validates input")
+        
+        # Test 3: Test evidence download endpoint
+        if initial_evidence:
+            evidence_id = initial_evidence[0].get('id')
+            if evidence_id:
+                success, response = self.run_test(
+                    f"3. GET /api/evidence/{evidence_id}/download - Download evidence",
+                    "GET",
+                    f"evidence/{evidence_id}/download",
+                    200
+                )
+                
+                if success:
+                    self.log("✅ Evidence download endpoint working")
+        
+        # Test 4: Test evidence management endpoints exist
+        success, response = self.run_test(
+            "4. DELETE /api/evidence/non-existent - Test delete endpoint exists",
+            "DELETE",
+            "evidence/non-existent-id",
+            404  # Should return not found
+        )
+        
+        if success:
+            self.log("✅ Evidence delete endpoint exists and validates")
+        
+        success, response = self.run_test(
+            "5. PATCH /api/evidence/non-existent/approve - Test approve endpoint exists",
+            "PATCH",
+            "evidence/non-existent-id/approve",
+            404  # Should return not found
+        )
+        
+        if success:
+            self.log("✅ Evidence approve endpoint exists and validates")
+        
+        success, response = self.run_test(
+            "6. PATCH /api/evidence/non-existent/reject - Test reject endpoint exists",
+            "PATCH",
+            "evidence/non-existent-id/reject",
+            404  # Should return not found
+        )
+        
+        if success:
+            self.log("✅ Evidence reject endpoint exists and validates")
+        
+        # Restore original token
+        self.token = original_token
+        
+        self.log("✅ Tasks/Evidence API with Policy Validation testing completed")
+        return True
+
+    def test_settings_apis(self):
+        """Test Settings APIs (owner-roles, categories, departments)"""
+        self.log("\n=== TESTING SETTINGS APIS ===")
+        
+        # Login with admin credentials
+        success, response = self.run_test(
+            "Login for Settings APIs testing",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "admin@testfirma.de", "password": "Test123!"}
+        )
+        
+        if not success or 'access_token' not in response:
+            self.log("❌ Could not login for Settings APIs testing")
+            return False
+        
+        # Store original token and use admin token
+        original_token = self.token
+        self.token = response['access_token']
+        
+        # Test 1: GET /api/owner-roles
+        success, response = self.run_test(
+            "1. GET /api/owner-roles - Get owner roles",
+            "GET",
+            "owner-roles",
+            200
+        )
+        
+        if success and response:
+            owner_roles = response
+            self.log(f"✅ Found {len(owner_roles)} owner roles")
+            for role in owner_roles[:3]:  # Show first 3
+                self.log(f"   - {role.get('name', 'Unknown')} ({len(role.get('emails', []))} emails)")
+        
+        # Test 2: GET /api/categories
+        success, response = self.run_test(
+            "2. GET /api/categories - Get categories",
+            "GET",
+            "categories",
+            200
+        )
+        
+        if success and response:
+            categories = response
+            self.log(f"✅ Found {len(categories)} categories")
+            for category in categories[:3]:  # Show first 3
+                self.log(f"   - {category.get('name', 'Unknown')} (Color: {category.get('color', 'Unknown')})")
+        
+        # Test 3: GET /api/departments
+        success, response = self.run_test(
+            "3. GET /api/departments - Get departments",
+            "GET",
+            "departments",
+            200
+        )
+        
+        if success and response:
+            departments = response
+            self.log(f"✅ Found {len(departments)} departments")
+            for department in departments[:3]:  # Show first 3
+                self.log(f"   - {department.get('name', 'Unknown')} (Color: {department.get('color', 'Unknown')})")
+        
+        # Restore original token
+        self.token = original_token
+        
+        self.log("✅ Settings APIs testing completed")
+        return True
+
     def test_gdpr_compliance_features(self):
         """Test comprehensive GDPR/DSGVO compliance features"""
         self.log("\n=== TESTING GDPR/DSGVO COMPLIANCE FEATURES ===")
