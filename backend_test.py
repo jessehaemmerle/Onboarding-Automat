@@ -3447,6 +3447,37 @@ class OnboardingAutomatTester:
         self.log("✅ Task Dependencies Backend testing completed")
         return True
 
+    def run_evidence_policies_tests(self):
+        """Run Evidence Policies focused test suite as requested in review"""
+        self.log("🚀 Starting OnboardIQ Backend Evidence Policies Testing")
+        self.log(f"Base URL: {self.base_url}")
+        
+        # Focus on Evidence Policies testing as requested
+        test_suites = [
+            # 1. Existing Functionality - Auth
+            self.test_auth_flow,  # POST /api/auth/login with admin@testfirma.de / Test123! + GET /api/auth/me
+            
+            # 2. Evidence Policies API (NEW)
+            self.test_evidence_policies_api,  # All Evidence Policies CRUD endpoints
+            
+            # 3. Tasks/Evidence API with Policy Validation
+            self.test_tasks_evidence_with_policy_validation,  # GET /api/tasks/{task_id}/evidence + policy validation
+            
+            # 4. Settings APIs
+            self.test_settings_apis,  # GET /api/owner-roles, /api/categories, /api/departments
+        ]
+        
+        for test_suite in test_suites:
+            try:
+                test_suite()
+            except Exception as e:
+                self.log(f"❌ Test suite failed with error: {str(e)}")
+        
+        # Print final results
+        self.print_results()
+        
+        return self.tests_passed == self.tests_run
+
     def run_all_tests(self):
         """Run comprehensive test suite"""
         self.log("🚀 Starting Onboarding-Automat Backend API Tests")
