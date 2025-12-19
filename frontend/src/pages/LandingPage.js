@@ -91,7 +91,7 @@ export default function LandingPage() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-slate-900">Onboarding-Automat</span>
+              <span className="text-xl font-bold text-slate-900">OnboardIQ</span>
             </div>
             <div className="flex items-center gap-4">
               <Button variant="ghost" onClick={() => navigate("/login")}>
@@ -119,7 +119,7 @@ export default function LandingPage() {
               </h1>
               <p className="mt-6 text-lg text-slate-600 leading-relaxed">
                 Strukturierte Checklisten, automatische Aufgabenverteilung und volle Transparenz. 
-                Der Onboarding-Automat macht Ihre HR-Prozesse effizienter und DSGVO-konform.
+                OnboardIQ macht Ihre HR-Prozesse effizienter und DSGVO-konform.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
                 <Button size="lg" onClick={() => navigate("/register-organization")} className="gap-2">
@@ -205,7 +205,7 @@ export default function LandingPage() {
               Alles was Sie für HR-Prozesse brauchen
             </h2>
             <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
-              Von der Einstellung bis zum Austritt - der Onboarding-Automat begleitet Sie durch jeden Schritt.
+              Von der Einstellung bis zum Austritt - OnboardIQ begleitet Sie durch jeden Schritt.
             </p>
           </div>
 
@@ -317,7 +317,7 @@ export default function LandingPage() {
                 100% Datenschutz-konform
               </h2>
               <p className="text-slate-300 text-lg mb-8">
-                Der Onboarding-Automat wurde von Grund auf mit Datenschutz im Fokus entwickelt. 
+                OnboardIQ wurde von Grund auf mit Datenschutz im Fokus entwickelt. 
                 Alle Funktionen entsprechen den Anforderungen der DSGVO.
               </p>
               <div className="grid sm:grid-cols-2 gap-4">
@@ -385,7 +385,7 @@ export default function LandingPage() {
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                   <Zap className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold">Onboarding-Automat</span>
+                <span className="text-xl font-bold">OnboardIQ</span>
               </div>
               <p className="text-slate-400">
                 HR-Prozesse automatisieren, Zeit sparen, Compliance sichern.
@@ -415,7 +415,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 text-center text-slate-400">
-            <p>© 2025 Onboarding-Automat. Alle Rechte vorbehalten.</p>
+            <p>© 2025 OnboardIQ. Alle Rechte vorbehalten.</p>
           </div>
         </div>
       </footer>
