@@ -34,6 +34,7 @@ export default function Layout() {
   // Admin-Navigation für Organisations-Admins (Benutzerverwaltung)
   const adminNavItems = isAdmin ? [
     { to: "/user-management", label: "Benutzerverwaltung", icon: Users },
+    { to: "/evidence-policies", label: "Nachweis-Richtlinien", icon: Shield },
   ] : [];
 
   return (
