@@ -792,7 +792,7 @@ async def get_all_users(admin: dict = Depends(require_super_admin)):
     return users
 
 @api_router.patch("/admin/users/{user_id}/status")
-async def update_user_status(user_id: str, status: str, admin: dict = Depends(require_super_admin)):
+async def update_user_status(user_id: str, new_status: str, admin: dict = Depends(require_super_admin)):
     """Block/Unblock a user - Super-Admin only"""
     if status not in ["active", "blocked"]:
         raise HTTPException(status_code=400, detail="Status muss 'active' oder 'blocked' sein")
@@ -845,7 +845,7 @@ async def admin_reset_password(user_id: str, new_password: str, admin: dict = De
     return {"message": "Passwort erfolgreich zurückgesetzt", "user_id": user_id}
 
 @api_router.patch("/admin/organizations/{org_id}/status")
-async def update_organization_status(org_id: str, status: str, admin: dict = Depends(require_super_admin)):
+async def update_organization_status(org_id: str, new_status: str, admin: dict = Depends(require_super_admin)):
     """Activate/Deactivate an organization - Super-Admin only"""
     if status not in ["active", "inactive", "suspended"]:
         raise HTTPException(status_code=400, detail="Status muss 'active', 'inactive' oder 'suspended' sein")
@@ -1305,7 +1305,7 @@ async def org_reset_user_password(user_id: str, new_password: str, current_user:
     return {"message": "Passwort erfolgreich zurückgesetzt", "user_id": user_id}
 
 @api_router.patch("/org/users/{user_id}/status")
-async def org_update_user_status(user_id: str, status: str, current_user: dict = Depends(require_admin)):
+async def org_update_user_status(user_id: str, new_status: str, current_user: dict = Depends(require_admin)):
     """Block/Unblock a user in the same organization - Org Admin only"""
     if status not in ["active", "blocked"]:
         raise HTTPException(status_code=400, detail="Status muss 'active' oder 'blocked' sein")
@@ -1779,7 +1779,7 @@ async def resolve_owner_email(owner_role: str, organization_id: str) -> str:
     return ""
 
 @api_router.get("/cases", response_model=List[OnboardingCaseResponse])
-async def get_cases(status: Optional[str] = None, case_type: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+async def get_cases(case_status: Optional[str] = None, case_type: Optional[str] = None, current_user: dict = Depends(get_current_user)):
     query = get_org_filter(current_user)
     if status:
         query["status"] = status
@@ -2015,7 +2015,7 @@ async def reschedule_case(case_id: str, data: RescheduleRequest, current_user: d
     return {"message": "Startdatum aktualisiert", "tasks_updated": len(open_tasks)}
 
 @api_router.patch("/cases/{case_id}/status")
-async def update_case_status(case_id: str, status: str, current_user: dict = Depends(get_current_user)):
+async def update_case_status(case_id: str, new_status: str, current_user: dict = Depends(get_current_user)):
     if status not in ["active", "completed"]:
         raise HTTPException(status_code=400, detail="Ungültiger Status")
     query = {"id": case_id, **get_org_filter(current_user)}
@@ -2096,7 +2096,7 @@ async def get_my_tasks(current_user: dict = Depends(get_current_user)):
     return [TaskResponse(**t) for t in tasks]
 
 @api_router.patch("/tasks/{task_id}/status")
-async def update_task_status(task_id: str, status: str, current_user: dict = Depends(get_current_user)):
+async def update_task_status(task_id: str, new_status: str, current_user: dict = Depends(get_current_user)):
     if status not in ["open", "done"]:
         raise HTTPException(status_code=400, detail="Ungültiger Status")
     
