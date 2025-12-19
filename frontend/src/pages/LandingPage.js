@@ -122,11 +122,11 @@ export default function LandingPage() {
                 OnboardIQ macht Ihre HR-Prozesse effizienter und DSGVO-konform.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                <Button size="lg" onClick={() => navigate("/register-organization")} className="gap-2">
-                  Jetzt starten <ArrowRight className="w-4 h-4" />
+                <Button size="lg" onClick={() => navigate("/kontakt")} className="gap-2">
+                  Vertrieb kontaktieren <ArrowRight className="w-4 h-4" />
                 </Button>
                 <Button size="lg" variant="outline" onClick={() => navigate("/login")}>
-                  Demo ansehen
+                  Anmelden
                 </Button>
               </div>
               <div className="mt-8 flex items-center gap-6 text-sm text-slate-500">
