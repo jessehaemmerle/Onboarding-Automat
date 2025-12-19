@@ -3165,19 +3165,15 @@ async def get_privacy_info():
         }
     }
 
-# Include main router and new modular routers
-app.include_router(api_router)
-
-# Import and include new modular routers
-from routers.org import router as org_router
-from routers.settings import router as settings_router
+# Import and include new modular routers BEFORE adding to app
 from routers.tasks import router as tasks_router
 
-# These routers add additional/enhanced functionality
-# The original endpoints in api_router are kept for backwards compatibility
-api_router.include_router(org_router)
-api_router.include_router(settings_router)
+# Add new modular router endpoints to api_router
+# These add the evidence-policies endpoints
 api_router.include_router(tasks_router)
+
+# Include main router with all routes
+app.include_router(api_router)
 
 app.add_middleware(
     CORSMiddleware,
