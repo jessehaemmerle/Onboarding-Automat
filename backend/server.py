@@ -1693,6 +1693,13 @@ async def get_template(template_id: str, current_user: dict = Depends(get_curren
 
 @api_router.post("/templates", response_model=TemplateResponse)
 async def create_template(data: TemplateCreate, admin: dict = Depends(require_admin)):
+    # Check billing limit for templates
+    org_id = admin.get("organization_id")
+    if org_id:
+        allowed, message = await check_limit(org_id, "templates", 1)
+        if not allowed:
+            raise HTTPException(status_code=403, detail=message)
+    
     template_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     tasks = []
