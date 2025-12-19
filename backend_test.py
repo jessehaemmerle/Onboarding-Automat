@@ -3697,6 +3697,9 @@ class OnboardingAutomatTester:
             # Core Authentication Tests
             self.test_auth_flow,  # Basic auth with admin@testfirma.de / Test123!
             
+            # BILLING/MONETIZATION SYSTEM TESTS (as requested in review)
+            self.test_billing_monetization_system,  # Test OnboardIQ Backend Billing/Monetization System
+            
             # NEW EVIDENCE POLICIES FEATURE TESTS (as requested in review)
             self.test_evidence_policies_api,  # Test Evidence Policies CRUD API
             self.test_tasks_evidence_with_policy_validation,  # Test Evidence API with Policy Validation
