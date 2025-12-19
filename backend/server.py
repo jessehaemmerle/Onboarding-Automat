@@ -18,35 +18,34 @@ import base64
 from jinja2 import Environment, FileSystemLoader
 import asyncio
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+# Import centralized configuration
+from config import (
+    db, client, logger, MAX_FILE_SIZE, SECRET_KEY, ALGORITHM, 
+    ACCESS_TOKEN_EXPIRE_DAYS, MASTER_ADMIN_KEY, pwd_context, security,
+    RESEND_API_KEY, SENDER_EMAIL, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, SUPER_ADMIN_NAME
+)
 
-# File upload settings
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+# Import models (can be used throughout the app)
+from models import (
+    UserBase, UserCreate, UserLogin, UserResponse, TokenResponse,
+    LicenseKeyCreate, LicenseKeyResponse, OrganizationBase, OrganizationCreate, OrganizationResponse,
+    OnboardingCaseCreate, TaskResponse, EvidenceResponse, TaskCommentCreate, TaskCommentResponse,
+    OnboardingCaseResponse, RescheduleRequest, DashboardStats,
+    OwnerRoleBase, OwnerRoleCreate, OwnerRoleResponse,
+    CategoryBase, CategoryCreate, CategoryResponse,
+    DepartmentBase, DepartmentCreate, DepartmentResponse,
+    TemplateTaskBase, TemplateBase, TemplateCreate, TemplateTaskResponse, TemplateResponse,
+    OrgSettingsBase, OrgSettingsResponse,
+    AuditLogEntry, AuditLogResponse,
+    SalesContactRequest, ConsentRecord, DataExportRequest, DataDeletionRequest
+)
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
-
-# JWT Settings
-SECRET_KEY = os.environ.get('JWT_SECRET', 'onboarding-automat-secret-key-change-in-production')
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_DAYS = 7
-
-# Master Admin Key for license generation
-MASTER_ADMIN_KEY = os.environ.get('MASTER_ADMIN_KEY', 'change-this-master-key-in-production')
-
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security = HTTPBearer()
+# Import services
+from services.audit import log_audit
+from services.email import send_sales_notification_email
 
 app = FastAPI(title="OnboardIQ API")
 api_router = APIRouter(prefix="/api")
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 # ============ HEALTH CHECK ENDPOINT (for Kubernetes) ============
 @app.get("/health")
