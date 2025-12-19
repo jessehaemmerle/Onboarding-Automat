@@ -3452,11 +3452,6 @@ class OnboardingAutomatTester:
         self.log("🚀 Starting Onboarding-Automat Backend API Tests")
         self.log(f"Base URL: {self.base_url}")
         
-        # Test authentication first
-        if not self.test_auth_flow():
-            self.log("❌ Authentication failed - stopping tests")
-            return False
-        
         # Run all test suites
         test_suites = [
             # Core Authentication Tests
