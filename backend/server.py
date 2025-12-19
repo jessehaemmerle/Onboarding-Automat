@@ -3010,7 +3010,7 @@ async def process_deletion_request(request_id: str, action: str, admin: dict = D
             action="delete",
             resource_type="user",
             resource_id=user_id,
-            details=f"Löschantrag genehmigt und Daten anonymisiert (DSGVO Art. 17)"
+            details="Löschantrag genehmigt und Daten anonymisiert (DSGVO Art. 17)"
         )
         
         return {"message": "Benutzerdaten wurden anonymisiert", "status": "completed"}
