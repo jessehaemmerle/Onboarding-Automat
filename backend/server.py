@@ -794,7 +794,7 @@ async def get_all_users(admin: dict = Depends(require_super_admin)):
 @api_router.patch("/admin/users/{user_id}/status")
 async def update_user_status(user_id: str, new_status: str, admin: dict = Depends(require_super_admin)):
     """Block/Unblock a user - Super-Admin only"""
-    if status not in ["active", "blocked"]:
+    if new_status not in ["active", "blocked"]:
         raise HTTPException(status_code=400, detail="Status muss 'active' oder 'blocked' sein")
     
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
@@ -805,7 +805,7 @@ async def update_user_status(user_id: str, new_status: str, admin: dict = Depend
         raise HTTPException(status_code=403, detail="Super-Admin kann nicht gesperrt werden")
     
     old_status = user.get("status", "active")
-    await db.users.update_one({"id": user_id}, {"$set": {"status": status}})
+    await db.users.update_one({"id": user_id}, {"$set": {"status": new_status}})
     
     await log_audit(
         user=admin,
@@ -813,9 +813,9 @@ async def update_user_status(user_id: str, new_status: str, admin: dict = Depend
         resource_type="user",
         resource_id=user_id,
         resource_name=user.get("email"),
-        details=f"Benutzer-Status geändert: {old_status} -> {status}",
+        details=f"Benutzer-Status geändert: {old_status} -> {new_status}",
         old_value=old_status,
-        new_value=status
+        new_value=new_status
     )
     
     return {"message": f"Benutzer-Status auf '{status}' gesetzt", "user_id": user_id}
@@ -847,7 +847,7 @@ async def admin_reset_password(user_id: str, new_password: str, admin: dict = De
 @api_router.patch("/admin/organizations/{org_id}/status")
 async def update_organization_status(org_id: str, new_status: str, admin: dict = Depends(require_super_admin)):
     """Activate/Deactivate an organization - Super-Admin only"""
-    if status not in ["active", "inactive", "suspended"]:
+    if new_status not in ["active", "inactive", "suspended"]:
         raise HTTPException(status_code=400, detail="Status muss 'active', 'inactive' oder 'suspended' sein")
     
     org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
@@ -855,7 +855,7 @@ async def update_organization_status(org_id: str, new_status: str, admin: dict =
         raise HTTPException(status_code=404, detail="Organisation nicht gefunden")
     
     old_status = org.get("status", "active")
-    await db.organizations.update_one({"id": org_id}, {"$set": {"status": status}})
+    await db.organizations.update_one({"id": org_id}, {"$set": {"status": new_status}})
     
     await log_audit(
         user=admin,
@@ -863,12 +863,12 @@ async def update_organization_status(org_id: str, new_status: str, admin: dict =
         resource_type="organization",
         resource_id=org_id,
         resource_name=org.get("name"),
-        details=f"Organisations-Status geändert: {old_status} -> {status}",
+        details=f"Organisations-Status geändert: {old_status} -> {new_status}",
         old_value=old_status,
-        new_value=status
+        new_value=new_status
     )
     
-    return {"message": f"Organisations-Status auf '{status}' gesetzt", "org_id": org_id}
+    return {"message": f"Organisations-Status auf '{new_status}' gesetzt", "org_id": org_id}
 
 @api_router.patch("/admin/organizations/{org_id}/user-limit")
 async def update_organization_user_limit(org_id: str, user_limit: int, admin: dict = Depends(require_super_admin)):
@@ -1307,7 +1307,7 @@ async def org_reset_user_password(user_id: str, new_password: str, current_user:
 @api_router.patch("/org/users/{user_id}/status")
 async def org_update_user_status(user_id: str, new_status: str, current_user: dict = Depends(require_admin)):
     """Block/Unblock a user in the same organization - Org Admin only"""
-    if status not in ["active", "blocked"]:
+    if new_status not in ["active", "blocked"]:
         raise HTTPException(status_code=400, detail="Status muss 'active' oder 'blocked' sein")
     
     org_id = current_user.get("organization_id")
@@ -1328,7 +1328,7 @@ async def org_update_user_status(user_id: str, new_status: str, current_user: di
         raise HTTPException(status_code=403, detail="Keine Berechtigung für Admin-Status")
     
     old_status = user.get("status", "active")
-    await db.users.update_one({"id": user_id}, {"$set": {"status": status}})
+    await db.users.update_one({"id": user_id}, {"$set": {"status": new_status}})
     
     await log_audit(
         user=current_user,
