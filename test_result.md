@@ -89,6 +89,18 @@ backend:
         agent: "testing"
         comment: "Regular admin users (role: admin, is_super_admin: false) are correctly blocked from admin endpoints with 403 Forbidden. Access control working as expected."
 
+  - task: "OnboardIQ Backend Billing/Monetization System"
+    implemented: true
+    working: true
+    file: "backend/routers/billing.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ ONBOARDIQ BACKEND BILLING/MONETIZATION SYSTEM TESTING COMPLETED SUCCESSFULLY (100% success rate - 9/9 tests passed): Comprehensive testing of all billing endpoints with admin@testfirma.de / Test123! credentials as requested. ✅ ALL REQUESTED TEST CASES PASSED: 1) ✅ GET /api/billing/tiers - Returns exactly 5 pricing tiers (Starter, Team, Business, Enterprise, Unlimited) with correct user limits and pricing (€49-€799/month), 2) ✅ GET /api/billing/usage - Usage tracking working perfectly with all required fields (users: 3/25, cases: 7/150, storage: 0.0/2000 MB, templates: 6/15, current tier: Team, subscription status: active), 3) ✅ GET /api/billing/subscription - Subscription details retrieved successfully (Team tier, active status, monthly billing, €99/month pricing, 4 features included), 4) ✅ POST /api/billing/check-limit?resource=users - User limit check working (Allowed, OK message), 5) ✅ POST /api/billing/check-limit?resource=cases - Case limit check working (Allowed, OK message), 6) ✅ POST /api/billing/upgrade - Upgrade request to business tier successful (request ID generated, €199 monthly price confirmed), 7) ✅ POST /api/billing/check-limit?resource=storage - Storage limit check working (Allowed, OK message), 8) ✅ POST /api/billing/check-limit?resource=templates - Templates limit check working (Allowed, OK message). Complete billing/monetization system is fully functional with proper tier management, usage tracking, subscription handling, limit checking, and upgrade request processing. All endpoints secured with admin authentication and organization scoping."
+
 frontend:
   - task: "Admin Login Page (/admin/login)"
     implemented: true
