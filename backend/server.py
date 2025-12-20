@@ -756,9 +756,242 @@ async def get_organization(org_id: str, current_user: dict = Depends(get_current
 
 @api_router.get("/admin/licenses")
 async def get_all_licenses(admin: dict = Depends(require_super_admin)):
-    """Get all license keys - Super-Admin only"""
+    """Get all license keys with enriched data - Super-Admin only"""
     licenses = await db.license_keys.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Enrich with organization info
+    for lic in licenses:
+        if lic.get("organization_id"):
+            org = await db.organizations.find_one({"id": lic["organization_id"]}, {"_id": 0, "name": 1})
+            lic["organization_name"] = org["name"] if org else "Unknown"
+            lic["current_users"] = await db.users.count_documents({"organization_id": lic["organization_id"]})
+        else:
+            lic["organization_name"] = None
+            lic["current_users"] = 0
+    
     return licenses
+
+@api_router.get("/admin/licenses/{license_id}")
+async def get_license_details(license_id: str, admin: dict = Depends(require_super_admin)):
+    """Get detailed license info - Super-Admin only"""
+    license_key = await db.license_keys.find_one({"id": license_id}, {"_id": 0})
+    if not license_key:
+        raise HTTPException(status_code=404, detail="Lizenz nicht gefunden")
+    
+    # Enrich with organization and subscription info
+    if license_key.get("organization_id"):
+        org = await db.organizations.find_one({"id": license_key["organization_id"]}, {"_id": 0})
+        license_key["organization"] = org
+        license_key["current_users"] = await db.users.count_documents({"organization_id": license_key["organization_id"]})
+        
+        # Get subscription info
+        subscription = await db.subscriptions.find_one({"organization_id": license_key["organization_id"]}, {"_id": 0})
+        license_key["subscription"] = subscription
+    
+    return license_key
+
+@api_router.put("/admin/licenses/{license_id}")
+async def update_license(license_id: str, user_limit: int = None, expires_at: str = None, notes: str = None, admin: dict = Depends(require_super_admin)):
+    """Update license settings - Super-Admin only"""
+    license_key = await db.license_keys.find_one({"id": license_id}, {"_id": 0})
+    if not license_key:
+        raise HTTPException(status_code=404, detail="Lizenz nicht gefunden")
+    
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat(), "updated_by": admin["email"]}
+    
+    if user_limit is not None:
+        if user_limit < 1 and user_limit != -1:
+            raise HTTPException(status_code=400, detail="Benutzer-Limit muss mindestens 1 sein (oder -1 für unbegrenzt)")
+        update_data["user_limit"] = user_limit
+        
+        # Also update organization if assigned
+        if license_key.get("organization_id"):
+            await db.organizations.update_one(
+                {"id": license_key["organization_id"]},
+                {"$set": {"user_limit": user_limit}}
+            )
+    
+    if expires_at is not None:
+        update_data["expires_at"] = expires_at
+    
+    if notes is not None:
+        update_data["notes"] = notes
+    
+    await db.license_keys.update_one({"id": license_id}, {"$set": update_data})
+    
+    await log_audit(
+        user=admin,
+        action="update",
+        resource_type="license",
+        resource_id=license_id,
+        resource_name=license_key["key"],
+        details=f"Lizenz aktualisiert: {update_data}"
+    )
+    
+    return {"message": "Lizenz aktualisiert", "license_id": license_id}
+
+@api_router.patch("/admin/licenses/{license_id}/revoke")
+async def revoke_license(license_id: str, reason: str = "", admin: dict = Depends(require_super_admin)):
+    """Revoke a license - Super-Admin only"""
+    license_key = await db.license_keys.find_one({"id": license_id}, {"_id": 0})
+    if not license_key:
+        raise HTTPException(status_code=404, detail="Lizenz nicht gefunden")
+    
+    if license_key["status"] == "revoked":
+        raise HTTPException(status_code=400, detail="Lizenz ist bereits widerrufen")
+    
+    # Update license status
+    await db.license_keys.update_one(
+        {"id": license_id},
+        {"$set": {
+            "status": "revoked",
+            "revoked_at": datetime.now(timezone.utc).isoformat(),
+            "revoked_by": admin["email"],
+            "revocation_reason": reason
+        }}
+    )
+    
+    # Suspend organization if assigned
+    if license_key.get("organization_id"):
+        await db.organizations.update_one(
+            {"id": license_key["organization_id"]},
+            {"$set": {"status": "suspended", "suspended_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        # Update subscription status
+        await db.subscriptions.update_one(
+            {"organization_id": license_key["organization_id"]},
+            {"$set": {"status": "canceled"}}
+        )
+    
+    await log_audit(
+        user=admin,
+        action="revoke",
+        resource_type="license",
+        resource_id=license_id,
+        resource_name=license_key["key"],
+        details=f"Lizenz widerrufen. Grund: {reason}"
+    )
+    
+    return {"message": "Lizenz widerrufen", "license_id": license_id}
+
+@api_router.patch("/admin/licenses/{license_id}/reactivate")
+async def reactivate_license(license_id: str, admin: dict = Depends(require_super_admin)):
+    """Reactivate a revoked license - Super-Admin only"""
+    license_key = await db.license_keys.find_one({"id": license_id}, {"_id": 0})
+    if not license_key:
+        raise HTTPException(status_code=404, detail="Lizenz nicht gefunden")
+    
+    if license_key["status"] not in ["revoked", "expired"]:
+        raise HTTPException(status_code=400, detail="Lizenz ist nicht widerrufen oder abgelaufen")
+    
+    # Determine new status
+    new_status = "active" if license_key.get("organization_id") else "unused"
+    
+    await db.license_keys.update_one(
+        {"id": license_id},
+        {"$set": {
+            "status": new_status,
+            "reactivated_at": datetime.now(timezone.utc).isoformat(),
+            "reactivated_by": admin["email"]
+        }}
+    )
+    
+    # Reactivate organization if assigned
+    if license_key.get("organization_id"):
+        await db.organizations.update_one(
+            {"id": license_key["organization_id"]},
+            {"$set": {"status": "active"}}
+        )
+        await db.subscriptions.update_one(
+            {"organization_id": license_key["organization_id"]},
+            {"$set": {"status": "active"}}
+        )
+    
+    await log_audit(
+        user=admin,
+        action="reactivate",
+        resource_type="license",
+        resource_id=license_id,
+        resource_name=license_key["key"],
+        details="Lizenz reaktiviert"
+    )
+    
+    return {"message": "Lizenz reaktiviert", "license_id": license_id, "new_status": new_status}
+
+@api_router.delete("/admin/licenses/{license_id}")
+async def delete_license(license_id: str, confirm: bool = False, admin: dict = Depends(require_super_admin)):
+    """Delete an unused license - Super-Admin only"""
+    if not confirm:
+        raise HTTPException(status_code=400, detail="Bestätigung erforderlich (confirm=true)")
+    
+    license_key = await db.license_keys.find_one({"id": license_id}, {"_id": 0})
+    if not license_key:
+        raise HTTPException(status_code=404, detail="Lizenz nicht gefunden")
+    
+    if license_key["status"] == "active":
+        raise HTTPException(status_code=400, detail="Aktive Lizenzen können nicht gelöscht werden. Erst widerrufen.")
+    
+    await db.license_keys.delete_one({"id": license_id})
+    
+    await log_audit(
+        user=admin,
+        action="delete",
+        resource_type="license",
+        resource_id=license_id,
+        resource_name=license_key["key"],
+        details="Lizenz gelöscht"
+    )
+    
+    return {"message": "Lizenz gelöscht", "license_id": license_id}
+
+@api_router.post("/admin/licenses/{license_id}/add-users")
+async def add_users_to_license(license_id: str, additional_users: int, admin: dict = Depends(require_super_admin)):
+    """Add more users to a license - Super-Admin only"""
+    if additional_users < 1:
+        raise HTTPException(status_code=400, detail="Anzahl muss mindestens 1 sein")
+    
+    license_key = await db.license_keys.find_one({"id": license_id}, {"_id": 0})
+    if not license_key:
+        raise HTTPException(status_code=404, detail="Lizenz nicht gefunden")
+    
+    current_limit = license_key.get("user_limit", 10)
+    if current_limit == -1:
+        raise HTTPException(status_code=400, detail="Lizenz hat bereits unbegrenzte Benutzer")
+    
+    new_limit = current_limit + additional_users
+    
+    await db.license_keys.update_one(
+        {"id": license_id},
+        {"$set": {
+            "user_limit": new_limit,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_by": admin["email"]
+        }}
+    )
+    
+    # Also update organization if assigned
+    if license_key.get("organization_id"):
+        await db.organizations.update_one(
+            {"id": license_key["organization_id"]},
+            {"$set": {"user_limit": new_limit}}
+        )
+    
+    await log_audit(
+        user=admin,
+        action="update",
+        resource_type="license",
+        resource_id=license_id,
+        resource_name=license_key["key"],
+        details=f"Benutzer-Limit erhöht: {current_limit} -> {new_limit} (+{additional_users})"
+    )
+    
+    return {
+        "message": f"Benutzer-Limit erhöht auf {new_limit}",
+        "license_id": license_id,
+        "old_limit": current_limit,
+        "new_limit": new_limit
+    }
 
 @api_router.get("/admin/organizations")
 async def get_all_organizations(admin: dict = Depends(require_super_admin)):
