@@ -81,7 +81,7 @@ export default function CaseDetail() {
   const toggleTaskStatus = async (task) => {
     const newStatus = task.status === "done" ? "open" : "done";
     try {
-      await axios.patch(`${API}/tasks/${task.id}/status?status=${newStatus}`);
+      await axios.patch(`${API}/tasks/${task.id}/status?new_status=${newStatus}`);
       toast.success(newStatus === "done" ? "Task erledigt!" : "Task wieder geöffnet");
       fetchCase();
       if (selectedTask?.id === task.id) {
