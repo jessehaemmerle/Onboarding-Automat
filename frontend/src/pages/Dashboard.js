@@ -54,20 +54,24 @@ const KPICard = ({ title, value, icon: Icon, variant = "default", onClick }) => 
 export default function Dashboard() {
   const [stats, setStats] = useState({ overdue_tasks: 0, due_in_7_days: 0, active_cases: 0, completed_cases: 0, active_offboardings: 0, completed_offboardings: 0, active_rolechanges: 0, completed_rolechanges: 0 });
   const [cases, setCases] = useState([]);
+  const [completedCases, setCompletedCases] = useState([]);
   const [myTasks, setMyTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, casesRes, tasksRes] = await Promise.all([
+        const [statsRes, activeCasesRes, completedCasesRes, tasksRes] = await Promise.all([
           axios.get(`${API}/dashboard/stats`),
-          axios.get(`${API}/cases?status=active`),
+          axios.get(`${API}/cases?case_status=active`),
+          axios.get(`${API}/cases?case_status=completed`),
           axios.get(`${API}/tasks/my-tasks`),
         ]);
         setStats(statsRes.data);
-        setCases(casesRes.data);
+        setCases(activeCasesRes.data);
+        setCompletedCases(completedCasesRes.data);
         setMyTasks(tasksRes.data.filter(t => t.status === "open"));
       } catch (err) {
         toast.error("Fehler beim Laden der Daten");
@@ -77,6 +81,11 @@ export default function Dashboard() {
     };
     fetchData();
   }, []);
+
+  // Combined and filtered cases based on toggle
+  const displayedCases = showCompleted 
+    ? [...cases, ...completedCases].sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
+    : cases;
 
   const getTaskPriority = (task) => {
     const due = parseISO(task.due_date);
