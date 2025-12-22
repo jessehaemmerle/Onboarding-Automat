@@ -31,7 +31,7 @@ export default function Cases() {
   const fetchCases = async () => {
     try {
       let url = `${API}/cases?`;
-      if (statusFilter !== "all") url += `status=${statusFilter}&`;
+      if (statusFilter !== "all") url += `case_status=${statusFilter}&`;
       if (caseTypeFilter !== "all") url += `case_type=${caseTypeFilter}`;
       const res = await axios.get(url);
       setCases(res.data);
