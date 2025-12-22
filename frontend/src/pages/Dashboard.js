@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { AlertTriangle, Clock, Users, CheckCircle2, ArrowRight, Calendar, UserMinus, RefreshCw } from "lucide-react";
+import { Switch } from "../components/ui/switch";
+import { Label } from "../components/ui/label";
+import { AlertTriangle, Clock, Users, CheckCircle2, ArrowRight, Calendar, UserMinus, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { format, parseISO, isPast, isWithinInterval, addDays } from "date-fns";
 import { de } from "date-fns/locale";
 
