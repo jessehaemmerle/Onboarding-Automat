@@ -131,7 +131,7 @@ export default function OrgUserManagement() {
   const toggleUserStatus = async (targetUser) => {
     const newStatus = targetUser.status === "blocked" ? "active" : "blocked";
     try {
-      await axios.patch(`${API}/org/users/${targetUser.id}/status?status=${newStatus}`);
+      await axios.patch(`${API}/org/users/${targetUser.id}/status?new_status=${newStatus}`);
       toast.success(`Benutzer ${newStatus === "blocked" ? "gesperrt" : "aktiviert"}`);
       fetchData();
     } catch (err) {
