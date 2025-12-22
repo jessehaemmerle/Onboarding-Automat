@@ -55,7 +55,7 @@ export default function AdminUsers() {
   const toggleUserStatus = async (user) => {
     const newStatus = user.status === "blocked" ? "active" : "blocked";
     try {
-      await axios.patch(`${API}/admin/users/${user.id}/status?status=${newStatus}`);
+      await axios.patch(`${API}/admin/users/${user.id}/status?new_status=${newStatus}`);
       toast.success(`Benutzer ${newStatus === "blocked" ? "gesperrt" : "aktiviert"}`);
       fetchUsers();
     } catch (err) {
