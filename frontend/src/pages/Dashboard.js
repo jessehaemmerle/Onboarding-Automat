@@ -174,17 +174,37 @@ export default function Dashboard() {
 
       {/* Tabs */}
       <Tabs defaultValue="cases" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="cases" data-testid="tab-cases">Aktive Onboardings</TabsTrigger>
-          <TabsTrigger value="tasks" data-testid="tab-tasks">Meine Tasks ({myTasks.length})</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="cases" data-testid="tab-cases">
+              Vorgänge {showCompleted ? `(${displayedCases.length})` : `(${cases.length})`}
+            </TabsTrigger>
+            <TabsTrigger value="tasks" data-testid="tab-tasks">Meine Tasks ({myTasks.length})</TabsTrigger>
+          </TabsList>
+          
+          {/* Toggle für abgeschlossene Vorgänge */}
+          <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-lg">
+            <Switch
+              id="show-completed"
+              checked={showCompleted}
+              onCheckedChange={setShowCompleted}
+            />
+            <Label htmlFor="show-completed" className="text-sm text-slate-600 cursor-pointer flex items-center gap-2">
+              {showCompleted ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              Abgeschlossene anzeigen
+              {completedCases.length > 0 && (
+                <Badge variant="secondary" className="ml-1">{completedCases.length}</Badge>
+              )}
+            </Label>
+          </div>
+        </div>
 
         <TabsContent value="cases" className="space-y-4">
-          {cases.length === 0 ? (
+          {displayedCases.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <Users className="w-12 h-12 text-slate-300 mb-4" />
-                <h3 className="text-lg font-semibold text-slate-700 mb-2">Keine aktiven Onboardings</h3>
+                <h3 className="text-lg font-semibold text-slate-700 mb-2">Keine aktiven Vorgänge</h3>
                 <p className="text-slate-500 mb-4">Starten Sie Ihr erstes Onboarding</p>
                 <Button onClick={() => navigate("/new-onboarding")} className="btn-primary" data-testid="start-first-onboarding">
                   Onboarding starten <ArrowRight className="w-4 h-4 ml-2" />
@@ -193,53 +213,88 @@ export default function Dashboard() {
             </Card>
           ) : (
             <div className="grid gap-4">
-              {cases.slice(0, 5).map((c) => {
+              {displayedCases.slice(0, showCompleted ? 10 : 5).map((c) => {
                 const openTasks = c.tasks?.filter(t => t.status === "open").length || 0;
                 const totalTasks = c.tasks?.length || 0;
                 const overdueTasks = c.tasks?.filter(t => t.status === "open" && isPast(parseISO(t.due_date))).length || 0;
+                const isCompleted = c.status === "completed";
                 
                 return (
                   <Card
                     key={c.id}
-                    className="cursor-pointer card-hover"
+                    className={`cursor-pointer card-hover ${isCompleted ? 'bg-slate-50 opacity-75' : ''}`}
                     onClick={() => navigate(`/cases/${c.id}`)}
                     data-testid={`case-${c.id}`}
                   >
                     <CardContent className="p-5 flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                          <span className="text-blue-700 font-semibold text-sm">
-                            {c.employee_name.split(" ").map(n => n[0]).join("").toUpperCase()}
-                          </span>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          isCompleted ? 'bg-green-100' : 
+                          c.case_type === 'offboarding' ? 'bg-purple-100' : 
+                          c.case_type === 'rolechange' ? 'bg-orange-100' : 'bg-blue-100'
+                        }`}>
+                          {isCompleted ? (
+                            <CheckCircle2 className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <span className={`font-semibold text-sm ${
+                              c.case_type === 'offboarding' ? 'text-purple-700' : 
+                              c.case_type === 'rolechange' ? 'text-orange-700' : 'text-blue-700'
+                            }`}>
+                              {c.employee_name.split(" ").map(n => n[0]).join("").toUpperCase()}
+                            </span>
+                          )}
                         </div>
                         <div>
-                          <h3 className="font-semibold text-slate-900">{c.employee_name}</h3>
-                          <p className="text-sm text-slate-500">{c.template_name_snapshot}</p>
+                          <div className="flex items-center gap-2">
+                            <h3 className={`font-semibold ${isCompleted ? 'text-slate-500' : 'text-slate-900'}`}>
+                              {c.employee_name}
+                            </h3>
+                            {isCompleted && (
+                              <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Abgeschlossen
+                              </Badge>
+                            )}
+                            {c.case_type === 'offboarding' && !isCompleted && (
+                              <Badge variant="outline" className="text-purple-600 border-purple-300">Offboarding</Badge>
+                            )}
+                            {c.case_type === 'rolechange' && !isCompleted && (
+                              <Badge variant="outline" className="text-orange-600 border-orange-300">Rollenwechsel</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-500">{c.template_name || c.template_name_snapshot}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-6">
                         <div className="text-right">
-                          <p className="text-xs text-slate-500">Startdatum</p>
+                          <p className="text-xs text-slate-500">{isCompleted ? 'Abgeschlossen' : 'Startdatum'}</p>
                           <p className="text-sm font-medium text-slate-700 flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5" />
                             {format(parseISO(c.start_date), "dd. MMM yyyy", { locale: de })}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {overdueTasks > 0 && (
-                            <Badge variant="destructive" className="text-xs">{overdueTasks} überfällig</Badge>
-                          )}
-                          <Badge variant="secondary" className="text-xs">{totalTasks - openTasks}/{totalTasks}</Badge>
-                        </div>
+                        {!isCompleted && (
+                          <div className="flex items-center gap-2">
+                            {overdueTasks > 0 && (
+                              <Badge variant="destructive" className="text-xs">{overdueTasks} überfällig</Badge>
+                            )}
+                            <Badge variant="secondary" className="text-xs">{totalTasks - openTasks}/{totalTasks}</Badge>
+                          </div>
+                        )}
+                        {isCompleted && (
+                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                            {totalTasks}/{totalTasks} ✓
+                          </Badge>
+                        )}
                         <ArrowRight className="w-5 h-5 text-slate-400" />
                       </div>
                     </CardContent>
                   </Card>
                 );
               })}
-              {cases.length > 5 && (
+              {displayedCases.length > (showCompleted ? 10 : 5) && (
                 <Button variant="outline" onClick={() => navigate("/cases")} className="w-full">
-                  Alle {cases.length} Onboardings anzeigen
+                  Alle {displayedCases.length} Vorgänge anzeigen
                 </Button>
               )}
             </div>
