@@ -173,7 +173,7 @@ export default function CaseDetail() {
 
   const updateCaseStatus = async (status) => {
     try {
-      await axios.patch(`${API}/cases/${id}/status?status=${status}`);
+      await axios.patch(`${API}/cases/${id}/status?new_status=${status}`);
       toast.success("Status aktualisiert");
       fetchCase();
     } catch (err) {
