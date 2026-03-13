@@ -1,68 +1,44 @@
-"""Tasks Routes - Aufgaben, Evidence, Kommentare mit Evidence Policies"""
+"""Tasks routes for evidence policies, uploads and task comments."""
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 import uuid
 import base64
 import io
 
-import sys
-sys.path.append('/app/backend')
-
-from config import db, logger, MAX_FILE_SIZE
+try:
+    from ..auth import get_current_user, require_manager_or_admin, get_org_filter
+    from ..config import MAX_FILE_SIZE, db, logger
+except ImportError:  # pragma: no cover - fallback for direct module execution
+    from auth import get_current_user, require_manager_or_admin, get_org_filter  # type: ignore
+    from config import MAX_FILE_SIZE, db, logger  # type: ignore
 
 router = APIRouter(tags=["Tasks"])
 
-# ============ DEPENDENCIES ============
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
-from config import SECRET_KEY, ALGORITHM, security
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    try:
-        token = credentials.credentials
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten")
-    
-    user = await db.users.find_one({"id": user_id}, {"_id": 0})
-    if user is None:
-        raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten")
-    return user
-
-async def require_admin(current_user: dict = Depends(get_current_user)):
-    if current_user["role"] not in ["admin", "manager"] and not current_user.get("is_super_admin"):
-        raise HTTPException(status_code=403, detail="Admin-Berechtigung erforderlich")
-    return current_user
-
-def get_org_filter(current_user: dict) -> dict:
-    if current_user.get("is_super_admin"):
-        return {}
-    return {"organization_id": current_user.get("organization_id")}
-
 # ============ MODELS ============
 class TaskCommentCreate(BaseModel):
-    content: str
+    body: str = Field(validation_alias=AliasChoices("body", "content"))
 
 class TaskCommentResponse(BaseModel):
     id: str
     task_id: str
+    user_id: Optional[str] = None
     user_email: str
     user_name: str
-    content: str
+    body: str
+    content: Optional[str] = None
     created_at: str
 
 class EvidenceResponse(BaseModel):
     id: str
     task_id: str
     filename: str
-    content_type: str
+    file_type: str
+    content_type: Optional[str] = None
     uploaded_by: str
+    uploaded_by_name: Optional[str] = None
     uploaded_at: str
     file_size: int = 0
 
@@ -95,7 +71,7 @@ async def get_evidence_policies(current_user: dict = Depends(get_current_user)):
     return policies
 
 @router.post("/evidence-policies", response_model=EvidencePolicyResponse)
-async def create_evidence_policy(data: EvidencePolicyCreate, admin: dict = Depends(require_admin)):
+async def create_evidence_policy(data: EvidencePolicyCreate, admin: dict = Depends(require_manager_or_admin)):
     """Create a new evidence policy - Admin only"""
     org_id = admin.get("organization_id")
     if not org_id:
@@ -126,11 +102,11 @@ async def create_evidence_policy(data: EvidencePolicyCreate, admin: dict = Depen
     return EvidencePolicyResponse(**doc)
 
 @router.put("/evidence-policies/{policy_id}", response_model=EvidencePolicyResponse)
-async def update_evidence_policy(policy_id: str, data: EvidencePolicyCreate, admin: dict = Depends(require_admin)):
+async def update_evidence_policy(policy_id: str, data: EvidencePolicyCreate, admin: dict = Depends(require_manager_or_admin)):
     """Update an evidence policy - Admin only"""
     query = {"id": policy_id, **get_org_filter(admin)}
     
-    update_data = data.dict()
+    update_data = data.model_dump()
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     result = await db.evidence_policies.update_one(query, {"$set": update_data})
@@ -141,7 +117,7 @@ async def update_evidence_policy(policy_id: str, data: EvidencePolicyCreate, adm
     return EvidencePolicyResponse(**updated)
 
 @router.delete("/evidence-policies/{policy_id}")
-async def delete_evidence_policy(policy_id: str, admin: dict = Depends(require_admin)):
+async def delete_evidence_policy(policy_id: str, admin: dict = Depends(require_manager_or_admin)):
     """Delete an evidence policy - Admin only"""
     query = {"id": policy_id, **get_org_filter(admin)}
     result = await db.evidence_policies.delete_one(query)
@@ -163,30 +139,7 @@ async def get_default_evidence_policy():
         "retention_days": 1095
     }
 
-# ============ EVIDENCE ROUTES WITH POLICY VALIDATION ============
-
-async def get_task_evidence_policy(task_id: str, organization_id: str):
-    """Get the evidence policy for a specific task, or return default"""
-    task = await db.tasks.find_one({"id": task_id}, {"_id": 0, "evidence_policy_id": 1})
-    
-    if task and task.get("evidence_policy_id"):
-        policy = await db.evidence_policies.find_one(
-            {"id": task["evidence_policy_id"], "organization_id": organization_id}, 
-            {"_id": 0}
-        )
-        if policy:
-            return policy
-    
-    # Return default policy
-    return {
-        "allowed_file_types": ["application/pdf", "image/jpeg", "image/png", "image/gif",
-                               "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
-        "max_file_size_mb": 10,
-        "min_files_required": 1,
-        "max_files_allowed": 10,
-        "require_description": False,
-        "auto_approve": True
-    }
+# ============ EVIDENCE ROUTES ============
 
 @router.get("/tasks/{task_id}/evidence", response_model=List[EvidenceResponse])
 async def get_task_evidence(task_id: str, current_user: dict = Depends(get_current_user)):
@@ -196,69 +149,36 @@ async def get_task_evidence(task_id: str, current_user: dict = Depends(get_curre
         id=e["id"],
         task_id=e["task_id"],
         filename=e["filename"],
+        file_type=e.get("file_type", "application/octet-stream"),
         content_type=e.get("file_type", "application/octet-stream"),
         uploaded_by=e["uploaded_by"],
+        uploaded_by_name=e.get("uploaded_by_name"),
         uploaded_at=e["uploaded_at"],
         file_size=e.get("file_size", 0)
     ) for e in evidence_list]
 
 @router.post("/tasks/{task_id}/evidence", response_model=EvidenceResponse)
 async def upload_evidence(
-    task_id: str, 
-    file: UploadFile = File(...), 
+    task_id: str,
+    file: UploadFile = File(...),
     description: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Upload evidence file with policy validation"""
+    """Upload evidence while preserving the legacy API behavior."""
     # Validate task exists
     task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
     if not task:
         raise HTTPException(status_code=404, detail="Task nicht gefunden")
-    
-    # Get evidence policy
-    org_id = current_user.get("organization_id", "")
-    policy = await get_task_evidence_policy(task_id, org_id)
-    
-    # Check file count limit
-    current_evidence_count = await db.evidence.count_documents({"task_id": task_id})
-    max_files = policy.get("max_files_allowed", 10)
-    if current_evidence_count >= max_files:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Maximale Anzahl an Nachweisen erreicht ({max_files})"
-        )
-    
+
     # Read file content
     content = await file.read()
-    
-    # Validate file size
-    max_size_mb = policy.get("max_file_size_mb", 10)
-    max_size_bytes = max_size_mb * 1024 * 1024
-    if len(content) > max_size_bytes:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Datei zu groß (max {max_size_mb}MB)"
-        )
-    
-    # Validate file type
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="Datei zu groß (max 10MB)")
+
     file_type = file.content_type or "application/octet-stream"
-    allowed_types = policy.get("allowed_file_types", [])
-    if allowed_types and file_type not in allowed_types:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Dateityp nicht erlaubt. Erlaubt: {', '.join(allowed_types)}"
-        )
-    
-    # Check if description is required
-    if policy.get("require_description") and not description:
-        raise HTTPException(
-            status_code=400, 
-            detail="Beschreibung ist erforderlich"
-        )
-    
     evidence_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
-    
+
     evidence_doc = {
         "id": evidence_id,
         "task_id": task_id,
@@ -270,20 +190,19 @@ async def upload_evidence(
         "uploaded_by": current_user["email"],
         "uploaded_by_name": current_user["name"],
         "uploaded_at": now,
-        "status": "approved" if policy.get("auto_approve", True) else "pending",
-        "organization_id": org_id
+        "organization_id": current_user.get("organization_id", ""),
     }
     await db.evidence.insert_one(evidence_doc)
-    
-    logger.info(f"Evidence uploaded for task {task_id}: {file.filename} by {current_user['email']}")
-    
+
     return EvidenceResponse(
         id=evidence_id,
         task_id=task_id,
         filename=file.filename,
+        file_type=file_type,
         content_type=file_type,
         file_size=len(content),
         uploaded_by=current_user["email"],
+        uploaded_by_name=current_user["name"],
         uploaded_at=now
     )
 
@@ -317,7 +236,7 @@ async def delete_evidence(evidence_id: str, current_user: dict = Depends(get_cur
     return {"message": "Nachweis gelöscht"}
 
 @router.patch("/evidence/{evidence_id}/approve")
-async def approve_evidence(evidence_id: str, admin: dict = Depends(require_admin)):
+async def approve_evidence(evidence_id: str, admin: dict = Depends(require_manager_or_admin)):
     """Approve a pending evidence file - Admin only"""
     evidence = await db.evidence.find_one({"id": evidence_id}, {"_id": 0})
     if not evidence:
@@ -331,7 +250,7 @@ async def approve_evidence(evidence_id: str, admin: dict = Depends(require_admin
     return {"message": "Nachweis genehmigt"}
 
 @router.patch("/evidence/{evidence_id}/reject")
-async def reject_evidence(evidence_id: str, reason: str = "", admin: dict = Depends(require_admin)):
+async def reject_evidence(evidence_id: str, reason: str = "", admin: dict = Depends(require_manager_or_admin)):
     """Reject a pending evidence file - Admin only"""
     evidence = await db.evidence.find_one({"id": evidence_id}, {"_id": 0})
     if not evidence:
@@ -354,12 +273,14 @@ async def reject_evidence(evidence_id: str, reason: str = "", admin: dict = Depe
 @router.get("/tasks/{task_id}/comments", response_model=List[TaskCommentResponse])
 async def get_task_comments(task_id: str, current_user: dict = Depends(get_current_user)):
     """Get all comments for a task"""
-    comments = await db.task_comments.find({"task_id": task_id}, {"_id": 0}).sort("created_at", 1).to_list(100)
+    comments = await db.task_comments.find({"task_id": task_id}, {"_id": 0}).to_list(100)
     return [TaskCommentResponse(
         id=c["id"],
         task_id=c["task_id"],
+        user_id=c.get("user_id"),
         user_email=c.get("user_email", c.get("user_id", "")),
         user_name=c.get("user_name", "Unknown"),
+        body=c.get("body", c.get("content", "")),
         content=c.get("content", c.get("body", "")),
         created_at=c["created_at"]
     ) for c in comments]
@@ -375,8 +296,8 @@ async def create_task_comment(task_id: str, data: TaskCommentCreate, current_use
         "user_id": current_user["id"],
         "user_name": current_user["name"],
         "user_email": current_user["email"],
-        "content": data.content,
-        "body": data.content,  # Backwards compatibility
+        "content": data.body,
+        "body": data.body,
         "created_at": now
     }
     await db.task_comments.insert_one(doc)
@@ -384,8 +305,10 @@ async def create_task_comment(task_id: str, data: TaskCommentCreate, current_use
     return TaskCommentResponse(
         id=comment_id,
         task_id=task_id,
+        user_id=current_user["id"],
         user_email=current_user["email"],
         user_name=current_user["name"],
-        content=data.content,
+        body=data.body,
+        content=data.body,
         created_at=now
     )

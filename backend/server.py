@@ -1,49 +1,40 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Form, BackgroundTasks, Header
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, BackgroundTasks, Header
 from fastapi.responses import StreamingResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
-import logging
-from pathlib import Path
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
-from passlib.context import CryptContext
-from jose import JWTError, jwt
 import io
-import base64
-from jinja2 import Environment, FileSystemLoader
 import asyncio
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
-
-# File upload settings
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
-
-# JWT Settings
-SECRET_KEY = os.environ.get('JWT_SECRET', 'onboarding-automat-secret-key-change-in-production')
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_DAYS = 7
-
-# Master Admin Key for license generation
-MASTER_ADMIN_KEY = os.environ.get('MASTER_ADMIN_KEY', 'change-this-master-key-in-production')
-
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security = HTTPBearer()
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+try:
+    from .auth import (
+        create_access_token,
+        generate_license_key,
+        get_current_user,
+        get_org_filter,
+        get_password_hash,
+        require_admin,
+        require_super_admin,
+        verify_master_key,
+        verify_password,
+    )
+    from .config import client, db, logger
+except ImportError:  # pragma: no cover - fallback for direct module execution
+    from auth import (  # type: ignore
+        create_access_token,
+        generate_license_key,
+        get_current_user,
+        get_org_filter,
+        get_password_hash,
+        require_admin,
+        require_super_admin,
+        verify_master_key,
+        verify_password,
+    )
+    from config import client, db, logger  # type: ignore
 
 app = FastAPI(title="OnboardIQ API")
 api_router = APIRouter(prefix="/api")
@@ -533,75 +524,6 @@ async def log_audit(
     await db.audit_logs.insert_one(audit_entry)
     logger.info(f"AUDIT: {user.get('email', 'system')} - {action} - {resource_type} - {resource_id}")
     return audit_entry
-
-# ============ AUTH HELPERS ============
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-def create_access_token(data: dict) -> str:
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-def generate_license_key() -> str:
-    """Generate a license key in format OA-XXXX-XXXX-XXXX"""
-    import random
-    import string
-    chars = string.ascii_uppercase + string.digits
-    parts = [''.join(random.choices(chars, k=4)) for _ in range(3)]
-    return f"OA-{'-'.join(parts)}"
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Ungültiges Token")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Ungültiges Token")
-    
-    user = await db.users.find_one({"id": user_id}, {"_id": 0})
-    if user is None:
-        raise HTTPException(status_code=401, detail="Benutzer nicht gefunden")
-    
-    # Add organization info
-    if user.get("organization_id"):
-        org = await db.organizations.find_one({"id": user["organization_id"]}, {"_id": 0, "name": 1})
-        user["organization_name"] = org["name"] if org else "Unknown"
-    else:
-        user["organization_id"] = ""  # Set empty string for super admins
-        user["organization_name"] = "Super Admin" if user.get("is_super_admin") else "Unknown"
-    
-    # Check if super admin
-    user["is_super_admin"] = user.get("is_super_admin", False)
-    
-    return user
-
-async def require_admin(current_user: dict = Depends(get_current_user)):
-    if current_user.get("role") != "admin" and not current_user.get("is_super_admin"):
-        raise HTTPException(status_code=403, detail="Admin-Rechte erforderlich")
-    return current_user
-
-async def require_super_admin(current_user: dict = Depends(get_current_user)):
-    if not current_user.get("is_super_admin"):
-        raise HTTPException(status_code=403, detail="Super-Admin-Rechte erforderlich")
-    return current_user
-
-def verify_master_key(key: str):
-    if key != MASTER_ADMIN_KEY:
-        raise HTTPException(status_code=403, detail="Ungültiger Master-Admin-Key")
-    return True
-
-def get_org_filter(current_user: dict) -> dict:
-    """Get organization filter for queries - super admins see all"""
-    if current_user.get("is_super_admin"):
-        return {}
-    return {"organization_id": current_user.get("organization_id")}
 
 # ============ LICENSE & ORGANIZATION ROUTES ============
 
@@ -1244,37 +1166,6 @@ async def get_system_stats(admin: dict = Depends(require_super_admin)):
         },
         "generated_at": now.isoformat()
     }
-
-@api_router.patch("/admin/licenses/{license_id}/revoke")
-async def revoke_license(license_id: str, admin: dict = Depends(require_super_admin)):
-    """Revoke a license key - Super-Admin only"""
-    license_key = await db.license_keys.find_one({"id": license_id}, {"_id": 0})
-    if not license_key:
-        raise HTTPException(status_code=404, detail="Lizenz nicht gefunden")
-    
-    if license_key.get("status") == "revoked":
-        raise HTTPException(status_code=400, detail="Lizenz ist bereits widerrufen")
-    
-    old_status = license_key.get("status")
-    await db.license_keys.update_one({"id": license_id}, {"$set": {"status": "revoked", "revoked_at": datetime.now(timezone.utc).isoformat()}})
-    
-    # If license was active, also suspend the organization
-    if license_key.get("organization_id"):
-        await db.organizations.update_one(
-            {"id": license_key["organization_id"]},
-            {"$set": {"status": "suspended"}}
-        )
-    
-    await log_audit(
-        user=admin,
-        action="update",
-        resource_type="license",
-        resource_id=license_id,
-        resource_name=license_key.get("key"),
-        details=f"Lizenz widerrufen (Status: {old_status} -> revoked)"
-    )
-    
-    return {"message": "Lizenz erfolgreich widerrufen", "license_id": license_id}
 
 @api_router.patch("/admin/licenses/{license_id}/expiry")
 async def set_license_expiry(license_id: str, expiry_date: str, admin: dict = Depends(require_super_admin)):
@@ -2379,102 +2270,6 @@ async def update_task_status(task_id: str, new_status: str, current_user: dict =
     await db.tasks.update_one({"id": task_id}, {"$set": update_data})
     return {"message": "Task-Status aktualisiert"}
 
-# ============ EVIDENCE UPLOAD ROUTES ============
-
-@api_router.get("/tasks/{task_id}/evidence", response_model=List[EvidenceResponse])
-async def get_task_evidence(task_id: str, current_user: dict = Depends(get_current_user)):
-    evidence_list = await db.evidence.find({"task_id": task_id}, {"_id": 0, "file_data": 0}).to_list(50)
-    return [EvidenceResponse(**e) for e in evidence_list]
-
-@api_router.post("/tasks/{task_id}/evidence", response_model=EvidenceResponse)
-async def upload_evidence(task_id: str, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
-    # Validate task exists
-    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
-    if not task:
-        raise HTTPException(status_code=404, detail="Task nicht gefunden")
-    
-    # Read file content
-    content = await file.read()
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="Datei zu groß (max 10MB)")
-    
-    # Determine file type
-    file_type = file.content_type or "application/octet-stream"
-    
-    evidence_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
-    
-    evidence_doc = {
-        "id": evidence_id,
-        "task_id": task_id,
-        "filename": file.filename,
-        "file_type": file_type,
-        "file_size": len(content),
-        "file_data": base64.b64encode(content).decode("utf-8"),
-        "uploaded_by": current_user["email"],
-        "uploaded_by_name": current_user["name"],
-        "uploaded_at": now
-    }
-    await db.evidence.insert_one(evidence_doc)
-    
-    return EvidenceResponse(
-        id=evidence_id,
-        task_id=task_id,
-        filename=file.filename,
-        file_type=file_type,
-        file_size=len(content),
-        uploaded_by=current_user["email"],
-        uploaded_by_name=current_user["name"],
-        uploaded_at=now
-    )
-
-@api_router.get("/evidence/{evidence_id}/download")
-async def download_evidence(evidence_id: str, current_user: dict = Depends(get_current_user)):
-    evidence = await db.evidence.find_one({"id": evidence_id}, {"_id": 0})
-    if not evidence:
-        raise HTTPException(status_code=404, detail="Nachweis nicht gefunden")
-    
-    file_data = base64.b64decode(evidence["file_data"])
-    return StreamingResponse(
-        io.BytesIO(file_data),
-        media_type=evidence["file_type"],
-        headers={"Content-Disposition": f"attachment; filename=\"{evidence['filename']}\""}
-    )
-
-@api_router.delete("/evidence/{evidence_id}")
-async def delete_evidence(evidence_id: str, current_user: dict = Depends(get_current_user)):
-    evidence = await db.evidence.find_one({"id": evidence_id}, {"_id": 0})
-    if not evidence:
-        raise HTTPException(status_code=404, detail="Nachweis nicht gefunden")
-    
-    # Only allow uploader or admin to delete
-    if evidence["uploaded_by"] != current_user["email"] and current_user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Keine Berechtigung")
-    
-    await db.evidence.delete_one({"id": evidence_id})
-    return {"message": "Nachweis gelöscht"}
-
-@api_router.get("/tasks/{task_id}/comments", response_model=List[TaskCommentResponse])
-async def get_task_comments(task_id: str, current_user: dict = Depends(get_current_user)):
-    comments = await db.task_comments.find({"task_id": task_id}, {"_id": 0}).to_list(100)
-    return [TaskCommentResponse(**c) for c in comments]
-
-@api_router.post("/tasks/{task_id}/comments", response_model=TaskCommentResponse)
-async def create_task_comment(task_id: str, data: TaskCommentCreate, current_user: dict = Depends(get_current_user)):
-    comment_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
-    doc = {
-        "id": comment_id,
-        "task_id": task_id,
-        "user_id": current_user["id"],
-        "user_name": current_user["name"],
-        "user_email": current_user["email"],
-        "body": data.body,
-        "created_at": now
-    }
-    await db.task_comments.insert_one(doc)
-    return TaskCommentResponse(**doc)
-
 # ============ DASHBOARD ROUTES ============
 
 @api_router.get("/dashboard/stats", response_model=DashboardStats)
@@ -3412,9 +3207,13 @@ async def get_privacy_info():
         }
     }
 
-# Import and include new modular routers BEFORE adding to app
-from routers.tasks import router as tasks_router
-from routers.billing import router as billing_router, check_limit
+# Import and include modular routers BEFORE adding to app
+try:
+    from .routers.billing import check_limit, router as billing_router
+    from .routers.tasks import router as tasks_router
+except ImportError:  # pragma: no cover - fallback for direct module execution
+    from routers.billing import check_limit, router as billing_router  # type: ignore
+    from routers.tasks import router as tasks_router  # type: ignore
 
 # Add new modular router endpoints to api_router
 # These add the evidence-policies and billing endpoints

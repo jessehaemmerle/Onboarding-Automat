@@ -6,42 +6,14 @@ from pydantic import BaseModel
 from enum import Enum
 import uuid
 
-import sys
-sys.path.append('/app/backend')
-
-from config import db, logger
+try:
+    from ..auth import get_current_user, require_manager_or_admin, require_super_admin
+    from ..config import db, logger
+except ImportError:  # pragma: no cover - fallback for direct module execution
+    from auth import get_current_user, require_manager_or_admin, require_super_admin  # type: ignore
+    from config import db, logger  # type: ignore
 
 router = APIRouter(prefix="/billing", tags=["Billing & Monetization"])
-
-# ============ DEPENDENCIES ============
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
-from config import SECRET_KEY, ALGORITHM, security
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    try:
-        token = credentials.credentials
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten")
-    
-    user = await db.users.find_one({"id": user_id}, {"_id": 0})
-    if user is None:
-        raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten")
-    return user
-
-async def require_admin(current_user: dict = Depends(get_current_user)):
-    if current_user["role"] not in ["admin", "manager"] and not current_user.get("is_super_admin"):
-        raise HTTPException(status_code=403, detail="Admin-Berechtigung erforderlich")
-    return current_user
-
-async def require_super_admin(current_user: dict = Depends(get_current_user)):
-    if not current_user.get("is_super_admin"):
-        raise HTTPException(status_code=403, detail="Super-Admin-Berechtigung erforderlich")
-    return current_user
 
 # ============ MODELS ============
 
@@ -271,7 +243,7 @@ async def get_available_tiers():
     return tiers
 
 @router.get("/usage", response_model=UsageResponse)
-async def get_usage(current_user: dict = Depends(require_admin)):
+async def get_usage(current_user: dict = Depends(require_manager_or_admin)):
     """Get current usage and limits for the organization"""
     org_id = current_user.get("organization_id")
     if not org_id:
@@ -312,7 +284,7 @@ async def get_usage(current_user: dict = Depends(require_admin)):
     )
 
 @router.get("/subscription")
-async def get_subscription(current_user: dict = Depends(require_admin)):
+async def get_subscription(current_user: dict = Depends(require_manager_or_admin)):
     """Get subscription details for the organization"""
     org_id = current_user.get("organization_id")
     if not org_id:
@@ -340,7 +312,7 @@ async def check_resource_limit(resource: str, amount: int = 1, current_user: dic
     return {"allowed": allowed, "message": message}
 
 @router.post("/upgrade")
-async def request_upgrade(request: UpgradeRequest, current_user: dict = Depends(require_admin)):
+async def request_upgrade(request: UpgradeRequest, current_user: dict = Depends(require_manager_or_admin)):
     """Request an upgrade to a higher tier"""
     org_id = current_user.get("organization_id")
     if not org_id:

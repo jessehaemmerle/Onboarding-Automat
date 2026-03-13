@@ -42,3 +42,12 @@ Mit Datenbank-Reset:
 ```bash
 docker compose down -v
 ```
+
+## Tests
+
+```bash
+python -m compileall backend tests
+python -m unittest discover -s tests -v
+```
+
+Zusätzlich laeuft dieselbe Strukturpruefung in GitHub Actions ueber [.github/workflows/ci.yml](c:/Users/jesse/Documents/GitHub/Onboarding-Automat/.github/workflows/ci.yml).
