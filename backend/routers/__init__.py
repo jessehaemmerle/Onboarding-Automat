@@ -1,9 +1,1 @@
-from .auth import router as auth_router
-from .admin import router as admin_router
-from .org import router as org_router
-from .cases import router as cases_router
-from .tasks import router as tasks_router
-from .settings import router as settings_router
-from .dashboard import router as dashboard_router
-from .gdpr import router as gdpr_router
-from .contact import router as contact_router
+"""Router package for the Dockerized backend runtime."""
