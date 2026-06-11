@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -9,8 +9,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 export default function AdminStats() {
   const { isSuperAdmin } = useAuth();
@@ -29,7 +28,7 @@ export default function AdminStats() {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/admin/system-stats`);
+      const response = await api.get(`/admin/system-stats`);
       setStats(response.data);
     } catch (err) {
       toast.error("Fehler beim Laden der Statistiken");

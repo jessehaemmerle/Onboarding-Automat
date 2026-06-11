@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -8,9 +8,8 @@ import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "../components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { Plus, Trash2, Edit, Save, Users, Building2, Loader2, Tags, Briefcase } from "lucide-react";
+import { Plus, Trash2, Edit, Save, Users, Building2, Loader2, Tags, Briefcase, Webhook, ExternalLink, ToggleLeft, ToggleRight, Zap } from "lucide-react";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const COLOR_OPTIONS = [
   { value: "#3b82f6", label: "Blau" },
@@ -46,17 +45,28 @@ export default function Settings() {
   const [editingDepartment, setEditingDepartment] = useState(null);
   const [departmentForm, setDepartmentForm] = useState({ name: "", color: "#3b82f6" });
 
+  // Webhook state
+  const [webhooks, setWebhooks] = useState([]);
+  const [showWebhookDialog, setShowWebhookDialog] = useState(false);
+  const [webhookForm, setWebhookForm] = useState({ url: "", events: [], secret: "", description: "" });
+  const WEBHOOK_EVENTS = [
+    { value: "case.created",   label: "Vorgang erstellt" },
+    { value: "case.completed", label: "Vorgang abgeschlossen" },
+    { value: "task.completed", label: "Task abgeschlossen" },
+  ];
+
   useEffect(() => {
     fetchData();
+    fetchWebhooks();
   }, []);
 
   const fetchData = async () => {
     try {
       const [settingsRes, rolesRes, categoriesRes, departmentsRes] = await Promise.all([
-        axios.get(`${API}/settings`),
-        axios.get(`${API}/owner-roles`),
-        axios.get(`${API}/categories`),
-        axios.get(`${API}/departments`),
+        api.get(`/settings`),
+        api.get(`/owner-roles`),
+        api.get(`/categories`),
+        api.get(`/departments`),
       ]);
       setSettings(settingsRes.data);
       setOwnerRoles(rolesRes.data);
@@ -69,10 +79,49 @@ export default function Settings() {
     }
   };
 
+  const fetchWebhooks = async () => {
+    try {
+      const res = await api.get("/webhooks");
+      setWebhooks(res.data);
+    } catch { /* admin-only — silently ignore for non-admins */ }
+  };
+
+  const saveWebhook = async () => {
+    if (!webhookForm.url || !webhookForm.events.length) {
+      toast.error("URL und mindestens ein Event sind erforderlich");
+      return;
+    }
+    try {
+      await api.post("/webhooks", webhookForm);
+      toast.success("Webhook erstellt");
+      setShowWebhookDialog(false);
+      setWebhookForm({ url: "", events: [], secret: "", description: "" });
+      fetchWebhooks();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Fehler beim Erstellen");
+    }
+  };
+
+  const deleteWebhook = async (id) => {
+    if (!window.confirm("Webhook wirklich löschen?")) return;
+    try {
+      await api.delete(`/webhooks/${id}`);
+      toast.success("Webhook gelöscht");
+      fetchWebhooks();
+    } catch { toast.error("Fehler beim Löschen"); }
+  };
+
+  const toggleWebhook = async (id) => {
+    try {
+      const res = await api.patch(`/webhooks/${id}/toggle`);
+      fetchWebhooks();
+    } catch { toast.error("Fehler"); }
+  };
+
   const saveSettings = async () => {
     setSaving(true);
     try {
-      await axios.put(`${API}/settings`, settings);
+      await api.put(`/settings`, settings);
       toast.success("Einstellungen gespeichert");
     } catch (err) {
       toast.error("Fehler beim Speichern");
@@ -101,10 +150,10 @@ export default function Settings() {
     
     try {
       if (editingDepartment) {
-        await axios.put(`${API}/departments/${editingDepartment.id}`, departmentForm);
+        await api.put(`/departments/${editingDepartment.id}`, departmentForm);
         toast.success("Abteilung aktualisiert");
       } else {
-        await axios.post(`${API}/departments`, departmentForm);
+        await api.post(`/departments`, departmentForm);
         toast.success("Abteilung erstellt");
       }
       setShowDepartmentDialog(false);
@@ -117,7 +166,7 @@ export default function Settings() {
   const deleteDepartment = async (id) => {
     if (!window.confirm("Abteilung wirklich löschen?")) return;
     try {
-      await axios.delete(`${API}/departments/${id}`);
+      await api.delete(`/departments/${id}`);
       toast.success("Abteilung gelöscht");
       fetchData();
     } catch (err) {
@@ -152,10 +201,10 @@ export default function Settings() {
     
     try {
       if (editingRole) {
-        await axios.put(`${API}/owner-roles/${editingRole.id}`, payload);
+        await api.put(`/owner-roles/${editingRole.id}`, payload);
         toast.success("Rolle aktualisiert");
       } else {
-        await axios.post(`${API}/owner-roles`, payload);
+        await api.post(`/owner-roles`, payload);
         toast.success("Rolle erstellt");
       }
       setShowRoleDialog(false);
@@ -168,7 +217,7 @@ export default function Settings() {
   const deleteRole = async (id) => {
     if (!window.confirm("Rolle wirklich löschen?")) return;
     try {
-      await axios.delete(`${API}/owner-roles/${id}`);
+      await api.delete(`/owner-roles/${id}`);
       toast.success("Rolle gelöscht");
       fetchData();
     } catch (err) {
@@ -196,10 +245,10 @@ export default function Settings() {
     
     try {
       if (editingCategory) {
-        await axios.put(`${API}/categories/${editingCategory.id}`, categoryForm);
+        await api.put(`/categories/${editingCategory.id}`, categoryForm);
         toast.success("Kategorie aktualisiert");
       } else {
-        await axios.post(`${API}/categories`, categoryForm);
+        await api.post(`/categories`, categoryForm);
         toast.success("Kategorie erstellt");
       }
       setShowCategoryDialog(false);
@@ -212,7 +261,7 @@ export default function Settings() {
   const deleteCategory = async (id) => {
     if (!window.confirm("Kategorie wirklich löschen?")) return;
     try {
-      await axios.delete(`${API}/categories/${id}`);
+      await api.delete(`/categories/${id}`);
       toast.success("Kategorie gelöscht");
       fetchData();
     } catch (err) {
@@ -590,6 +639,124 @@ export default function Settings() {
       </Dialog>
 
       {/* Category Dialog */}
+      {/* Webhooks Section */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5" /> Webhooks
+            </CardTitle>
+            <CardDescription>Externe Systeme bei Ereignissen benachrichtigen</CardDescription>
+          </div>
+          <Button onClick={() => setShowWebhookDialog(true)} variant="outline" size="sm" data-testid="add-webhook">
+            <Plus className="w-4 h-4 mr-2" /> Webhook hinzufügen
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {webhooks.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <Webhook className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+              <p className="text-sm">Noch keine Webhooks konfiguriert</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {webhooks.map(wh => (
+                <div key={wh.id} className="flex items-center justify-between p-3 border rounded-lg bg-slate-50">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <ExternalLink className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span className="text-sm font-medium text-slate-900 truncate">{wh.url}</span>
+                      {wh.active ? (
+                        <Badge variant="secondary" className="bg-green-100 text-green-700 shrink-0">Aktiv</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-slate-500 shrink-0">Inaktiv</Badge>
+                      )}
+                    </div>
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {wh.events.map(e => (
+                        <Badge key={e} variant="outline" className="text-xs">{e}</Badge>
+                      ))}
+                    </div>
+                    {wh.description && <p className="text-xs text-slate-500 mt-1">{wh.description}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-4">
+                    <button
+                      className="text-slate-400 hover:text-slate-700 transition-colors"
+                      onClick={() => toggleWebhook(wh.id)}
+                      title={wh.active ? "Deaktivieren" : "Aktivieren"}
+                    >
+                      {wh.active ? <ToggleRight className="w-5 h-5 text-green-600" /> : <ToggleLeft className="w-5 h-5" />}
+                    </button>
+                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => deleteWebhook(wh.id)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Webhook Dialog */}
+      <Dialog open={showWebhookDialog} onOpenChange={setShowWebhookDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Neuer Webhook</DialogTitle>
+            <DialogDescription>Empfänger-URL und Events konfigurieren</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>URL *</Label>
+              <Input
+                placeholder="https://example.com/webhook"
+                value={webhookForm.url}
+                onChange={e => setWebhookForm({ ...webhookForm, url: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Events *</Label>
+              {WEBHOOK_EVENTS.map(ev => (
+                <label key={ev.value} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={webhookForm.events.includes(ev.value)}
+                    onChange={e => {
+                      const evts = e.target.checked
+                        ? [...webhookForm.events, ev.value]
+                        : webhookForm.events.filter(v => v !== ev.value);
+                      setWebhookForm({ ...webhookForm, events: evts });
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-slate-700">{ev.label}</span>
+                </label>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <Label>Secret (optional, für HMAC-Signatur)</Label>
+              <Input
+                placeholder="Geheimer Schlüssel"
+                value={webhookForm.secret}
+                onChange={e => setWebhookForm({ ...webhookForm, secret: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Beschreibung</Label>
+              <Input
+                placeholder="z.B. Slack-Benachrichtigung"
+                value={webhookForm.description}
+                onChange={e => setWebhookForm({ ...webhookForm, description: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowWebhookDialog(false)}>Abbrechen</Button>
+            <Button onClick={saveWebhook} className="btn-primary">Speichern</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
         <DialogContent>
           <DialogHeader>

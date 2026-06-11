@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -10,8 +10,7 @@ import {
   CreditCard, Users, FolderKanban, HardDrive, FileText, Check,
   TrendingUp, Calendar, Loader2, AlertCircle, ArrowRight, Zap, Crown
 } from "lucide-react";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 const TIER_ICONS = {
   starter: "🚀",
@@ -46,9 +45,9 @@ export default function Billing() {
   const fetchData = async () => {
     try {
       const [usageRes, subRes, tiersRes] = await Promise.all([
-        axios.get(`${API}/billing/usage`),
-        axios.get(`${API}/billing/subscription`),
-        axios.get(`${API}/billing/tiers`)
+        api.get(`/billing/usage`),
+        api.get(`/billing/subscription`),
+        api.get(`/billing/tiers`)
       ]);
       setUsage(usageRes.data);
       setSubscription(subRes.data);
@@ -71,7 +70,7 @@ export default function Billing() {
     
     setUpgrading(true);
     try {
-      await axios.post(`${API}/billing/upgrade`, {
+      await api.post(`/billing/upgrade`, {
         new_tier: selectedTier.tier,
         billing_cycle: billingCycle
       });

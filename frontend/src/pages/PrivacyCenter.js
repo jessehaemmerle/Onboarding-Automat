@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -12,8 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../components/ui/alert-dialog";
 import { Input } from "../components/ui/input";
 import { Shield, Download, Trash2, Eye, FileText, Clock, Database, AlertTriangle, Loader2, CheckCircle } from "lucide-react";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 export default function PrivacyCenter() {
   const { user, logout } = useAuth();
@@ -34,8 +33,8 @@ export default function PrivacyCenter() {
   const fetchData = async () => {
     try {
       const [dataRes, consentsRes] = await Promise.all([
-        axios.get(`${API}/gdpr/my-data`),
-        axios.get(`${API}/gdpr/consents`)
+        api.get(`/gdpr/my-data`),
+        api.get(`/gdpr/consents`)
       ]);
       setMyData(dataRes.data);
       setConsents(consentsRes.data);
@@ -49,7 +48,7 @@ export default function PrivacyCenter() {
   const exportData = async (format) => {
     setExporting(true);
     try {
-      const response = await axios.get(`${API}/gdpr/export?format=${format}`, {
+      const response = await api.get(`/gdpr/export?format=${format}`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -75,7 +74,7 @@ export default function PrivacyCenter() {
     
     setDeleting(true);
     try {
-      await axios.delete(`${API}/gdpr/delete-account?confirm=true`);
+      await api.delete(`/gdpr/delete-account?confirm=true`);
       toast.success("Ihr Account wurde gelöscht");
       logout();
       navigate("/login");
@@ -88,7 +87,7 @@ export default function PrivacyCenter() {
 
   const updateConsent = async (consentType, granted) => {
     try {
-      await axios.post(`${API}/gdpr/consents?consent_type=${consentType}&granted=${granted}`);
+      await api.post(`/gdpr/consents?consent_type=${consentType}&granted=${granted}`);
       toast.success(`Einwilligung ${granted ? 'erteilt' : 'widerrufen'}`);
       fetchData();
     } catch (err) {

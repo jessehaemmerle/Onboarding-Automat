@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -10,8 +10,7 @@ import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Switch } from "../components/ui/switch";
 import { ArrowLeft, Plus, Trash2, GripVertical, Save, Loader2 } from "lucide-react";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 export default function TemplateEditor() {
   const { id } = useParams();
@@ -38,8 +37,8 @@ export default function TemplateEditor() {
   const fetchOwnerRolesAndCategories = async () => {
     try {
       const [rolesRes, categoriesRes] = await Promise.all([
-        axios.get(`${API}/owner-roles`),
-        axios.get(`${API}/categories`)
+        api.get(`/owner-roles`),
+        api.get(`/categories`)
       ]);
       setOwnerRoles(rolesRes.data);
       setCategories(categoriesRes.data);
@@ -50,7 +49,7 @@ export default function TemplateEditor() {
 
   const fetchTemplate = async () => {
     try {
-      const res = await axios.get(`${API}/templates/${id}`);
+      const res = await api.get(`/templates/${id}`);
       setTemplate(res.data);
     } catch (err) {
       toast.error("Template nicht gefunden");
@@ -134,10 +133,10 @@ export default function TemplateEditor() {
       };
 
       if (isNew) {
-        await axios.post(`${API}/templates`, payload);
+        await api.post(`/templates`, payload);
         toast.success("Template erstellt");
       } else {
-        await axios.put(`${API}/templates/${id}`, payload);
+        await api.put(`/templates/${id}`, payload);
         toast.success("Template gespeichert");
       }
       navigate("/templates");

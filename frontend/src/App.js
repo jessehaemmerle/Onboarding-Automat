@@ -13,6 +13,7 @@ import NewRoleChange from "./pages/NewRoleChange";
 import Templates from "./pages/Templates";
 import TemplateEditor from "./pages/TemplateEditor";
 import Settings from "./pages/Settings";
+import Analytics from "./pages/Analytics";
 import EvidencePolicies from "./pages/EvidencePolicies";
 import Billing from "./pages/Billing";
 import AuditLog from "./pages/AuditLog";
@@ -81,6 +82,7 @@ function App() {
             <Route path="templates/:id" element={<TemplateEditor />} />
             <Route path="templates/new" element={<TemplateEditor />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="analytics" element={<Analytics />} />
             <Route path="evidence-policies" element={<EvidencePolicies />} />
             <Route path="billing" element={<Billing />} />
             <Route path="user-management" element={<OrgUserManagement />} />

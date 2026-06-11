@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -12,8 +12,7 @@ import {
   Zap, Mail, Phone, Building2, Users, Send, 
   CheckCircle2, ArrowLeft, Loader2, MessageSquare
 } from "lucide-react";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 export default function Kontakt() {
   const navigate = useNavigate();
@@ -38,7 +37,7 @@ export default function Kontakt() {
 
     setLoading(true);
     try {
-      await axios.post(`${API}/contact/sales`, form);
+      await api.post(`/contact/sales`, form);
       setSubmitted(true);
       toast.success("Vielen Dank! Wir melden uns in Kürze bei Ihnen.");
     } catch (err) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -13,8 +13,7 @@ import { Badge } from "../components/ui/badge";
 import { ArrowLeft, ArrowRight, Calendar as CalendarIcon, CheckCircle2, AlertTriangle, Loader2, UserMinus, Search } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 export default function NewOffboarding() {
   const navigate = useNavigate();
@@ -42,8 +41,8 @@ export default function NewOffboarding() {
   const fetchData = async () => {
     try {
       const [templatesRes, employeesRes] = await Promise.all([
-        axios.get(`${API}/templates?template_type=offboarding`),
-        axios.get(`${API}/employees/for-offboarding`),
+        api.get(`/templates?template_type=offboarding`),
+        api.get(`/employees/for-offboarding`),
       ]);
       setTemplates(templatesRes.data);
       setEmployees(employeesRes.data);
@@ -92,7 +91,7 @@ export default function NewOffboarding() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const res = await axios.post(`${API}/cases`, {
+      const res = await api.post(`/cases`, {
         ...formData,
         start_date: formData.start_date.toISOString(),
         case_type: "offboarding",

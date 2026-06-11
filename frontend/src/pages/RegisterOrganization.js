@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Building2, Key, User, Mail, Lock, Loader2, CheckCircle2 } from "lucide-react";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 export default function RegisterOrganization() {
   const navigate = useNavigate();
@@ -37,7 +36,7 @@ export default function RegisterOrganization() {
 
     setLoading(true);
     try {
-      const res = await axios.post(`${API}/auth/register-organization`, {
+      const res = await api.post(`/auth/register-organization`, {
         name: formData.name,
         license_key: formData.license_key,
         admin_name: formData.admin_name,

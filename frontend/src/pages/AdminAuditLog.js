@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -18,8 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 export default function AdminAuditLog() {
   const { isSuperAdmin } = useAuth();
@@ -43,11 +42,11 @@ export default function AdminAuditLog() {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      let url = `${API}/admin/audit-logs?limit=${limit}&offset=${offset}`;
+      let url = `/admin/audit-logs?limit=${limit}&offset=${offset}`;
       if (actionFilter) url += `&action=${actionFilter}`;
       if (resourceFilter) url += `&resource_type=${resourceFilter}`;
       
-      const response = await axios.get(url);
+      const response = await api.get(url);
       setLogs(response.data.logs);
       setTotal(response.data.total);
     } catch (err) {

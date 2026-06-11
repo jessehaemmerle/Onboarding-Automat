@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -12,8 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popove
 import { ScrollText, Download, Calendar as CalendarIcon, Search, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 const ACTION_LABELS = {
   create: { label: "Erstellt", color: "bg-emerald-100 text-emerald-700" },
@@ -58,13 +57,13 @@ export default function AuditLog() {
 
   const fetchLogs = async () => {
     try {
-      let url = `${API}/audit-logs?page=${page}&page_size=${pageSize}`;
+      let url = `/audit-logs?page=${page}&page_size=${pageSize}`;
       if (filters.action) url += `&action=${filters.action}`;
       if (filters.resource_type) url += `&resource_type=${filters.resource_type}`;
       if (filters.from_date) url += `&from_date=${filters.from_date.toISOString()}`;
       if (filters.to_date) url += `&to_date=${filters.to_date.toISOString()}`;
       
-      const res = await axios.get(url);
+      const res = await api.get(url);
       setLogs(res.data.entries);
       setTotal(res.data.total);
     } catch (err) {
@@ -76,11 +75,11 @@ export default function AuditLog() {
 
   const exportLogs = async () => {
     try {
-      let url = `${API}/audit-logs/export?`;
+      let url = `/audit-logs/export?`;
       if (filters.from_date) url += `from_date=${filters.from_date.toISOString()}&`;
       if (filters.to_date) url += `to_date=${filters.to_date.toISOString()}`;
       
-      const res = await axios.get(url, { responseType: "blob" });
+      const res = await api.get(url, { responseType: "blob" });
       const blobUrl = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = blobUrl;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -12,8 +12,7 @@ import {
   Plus, Trash2, Edit, Shield, FileCheck, FileX, Clock, Files,
   Loader2, AlertCircle, CheckCircle2, Settings2, Info
 } from "lucide-react";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 const FILE_TYPE_OPTIONS = [
   { value: "application/pdf", label: "PDF", icon: "📄" },
@@ -52,7 +51,7 @@ export default function EvidencePolicies() {
 
   const fetchPolicies = async () => {
     try {
-      const res = await axios.get(`${API}/evidence-policies`);
+      const res = await api.get(`/evidence-policies`);
       setPolicies(res.data);
     } catch (err) {
       console.error("Fetch error:", err);
@@ -117,10 +116,10 @@ export default function EvidencePolicies() {
     setSaving(true);
     try {
       if (editingPolicy) {
-        await axios.put(`${API}/evidence-policies/${editingPolicy.id}`, form);
+        await api.put(`/evidence-policies/${editingPolicy.id}`, form);
         toast.success("Policy aktualisiert");
       } else {
-        await axios.post(`${API}/evidence-policies`, form);
+        await api.post(`/evidence-policies`, form);
         toast.success("Policy erstellt");
       }
       setShowDialog(false);
@@ -135,7 +134,7 @@ export default function EvidencePolicies() {
   const deletePolicy = async (id) => {
     if (!window.confirm("Policy wirklich löschen?")) return;
     try {
-      await axios.delete(`${API}/evidence-policies/${id}`);
+      await api.delete(`/evidence-policies/${id}`);
       toast.success("Policy gelöscht");
       fetchPolicies();
     } catch (err) {

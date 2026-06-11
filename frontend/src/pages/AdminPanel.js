@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -15,8 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 export default function AdminPanel() {
   const { user, isSuperAdmin } = useAuth();
@@ -74,7 +73,7 @@ export default function AdminPanel() {
 
   const fetchLicenses = async () => {
     try {
-      const response = await axios.get(`${API}/admin/licenses`);
+      const response = await api.get(`/admin/licenses`);
       setLicenses(response.data);
       
       const unused = response.data.filter(l => l.status === 'unused').length;
@@ -88,7 +87,7 @@ export default function AdminPanel() {
 
   const fetchOrganizations = async () => {
     try {
-      const response = await axios.get(`${API}/admin/organizations`);
+      const response = await api.get(`/admin/organizations`);
       setOrganizations(response.data);
     } catch (err) {
       console.error("Error fetching organizations:", err);
@@ -104,8 +103,8 @@ export default function AdminPanel() {
         return;
       }
 
-      const response = await axios.post(
-        `${API}/admin/generate-license-keys`,
+      const response = await api.post(
+        `/admin/generate-license-keys`,
         licenseForm,
         { headers: { "X-Master-Key": masterKey } }
       );
@@ -132,7 +131,7 @@ export default function AdminPanel() {
 
   const saveEditedLicense = async () => {
     try {
-      await axios.put(`${API}/admin/licenses/${editingLicense.id}`, null, {
+      await api.put(`/admin/licenses/${editingLicense.id}`, null, {
         params: {
           user_limit: editForm.user_limit,
           notes: editForm.notes,
@@ -155,8 +154,8 @@ export default function AdminPanel() {
 
   const addUsersToLicense = async () => {
     try {
-      const response = await axios.post(
-        `${API}/admin/licenses/${addUsersLicense.id}/add-users`,
+      const response = await api.post(
+        `/admin/licenses/${addUsersLicense.id}/add-users`,
         null,
         { params: { additional_users: additionalUsers } }
       );
@@ -176,8 +175,8 @@ export default function AdminPanel() {
 
   const handleRevokeLicense = async () => {
     try {
-      await axios.patch(
-        `${API}/admin/licenses/${revokeLicense.id}/revoke`,
+      await api.patch(
+        `/admin/licenses/${revokeLicense.id}/revoke`,
         null,
         { params: { reason: revokeReason } }
       );
@@ -193,7 +192,7 @@ export default function AdminPanel() {
   const reactivateLicense = async (license) => {
     if (!window.confirm("Lizenz wirklich reaktivieren?")) return;
     try {
-      await axios.patch(`${API}/admin/licenses/${license.id}/reactivate`);
+      await api.patch(`/admin/licenses/${license.id}/reactivate`);
       toast.success("Lizenz reaktiviert");
       fetchLicenses();
       fetchOrganizations();
@@ -205,7 +204,7 @@ export default function AdminPanel() {
   const deleteLicense = async (license) => {
     if (!window.confirm(`Lizenz ${license.key} wirklich löschen? Dies kann nicht rückgängig gemacht werden.`)) return;
     try {
-      await axios.delete(`${API}/admin/licenses/${license.id}`, {
+      await api.delete(`/admin/licenses/${license.id}`, {
         params: { confirm: true }
       });
       toast.success("Lizenz gelöscht");

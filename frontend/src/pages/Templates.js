@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -10,8 +10,7 @@ import { Plus, FileText, MoreVertical, Copy, Trash2, Edit } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { useAuth } from "../context/AuthContext";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 export default function Templates() {
   const [templates, setTemplates] = useState([]);
@@ -25,7 +24,7 @@ export default function Templates() {
 
   const fetchTemplates = async () => {
     try {
-      const res = await axios.get(`${API}/templates`);
+      const res = await api.get(`/templates`);
       setTemplates(res.data);
     } catch (err) {
       toast.error("Fehler beim Laden der Templates");
@@ -36,7 +35,7 @@ export default function Templates() {
 
   const duplicateTemplate = async (id) => {
     try {
-      await axios.post(`${API}/templates/${id}/duplicate`);
+      await api.post(`/templates/${id}/duplicate`);
       toast.success("Template dupliziert");
       fetchTemplates();
     } catch (err) {
@@ -47,7 +46,7 @@ export default function Templates() {
   const deleteTemplate = async (id) => {
     if (!window.confirm("Template wirklich löschen?")) return;
     try {
-      await axios.delete(`${API}/templates/${id}`);
+      await api.delete(`/templates/${id}`);
       toast.success("Template gelöscht");
       fetchTemplates();
     } catch (err) {
@@ -90,7 +89,7 @@ export default function Templates() {
                 </Button>
                 <Button variant="outline" onClick={async () => {
                   try {
-                    await axios.post(`${API}/seed`);
+                    await api.post(`/seed`);
                     toast.success("Seed-Daten geladen!");
                     fetchTemplates();
                   } catch (err) {

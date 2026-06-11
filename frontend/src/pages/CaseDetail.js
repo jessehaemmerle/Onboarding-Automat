@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -16,8 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popove
 import { ArrowLeft, Calendar as CalendarIcon, Download, CheckCircle2, Circle, MessageSquare, Send, Clock, User, Mail, MapPin, FileText, Paperclip, Upload, Trash2, File, Image, UserMinus, RefreshCw, Lock } from "lucide-react";
 import { format, parseISO, isPast, isWithinInterval, addDays } from "date-fns";
 import { de } from "date-fns/locale";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 export default function CaseDetail() {
   const { id } = useParams();
@@ -42,7 +41,7 @@ export default function CaseDetail() {
 
   const fetchCase = async () => {
     try {
-      const res = await axios.get(`${API}/cases/${id}`);
+      const res = await api.get(`/cases/${id}`);
       setCaseData(res.data);
       if (res.data.start_date) {
         setNewStartDate(parseISO(res.data.start_date));
@@ -57,7 +56,7 @@ export default function CaseDetail() {
 
   const fetchComments = async (taskId) => {
     try {
-      const res = await axios.get(`${API}/tasks/${taskId}/comments`);
+      const res = await api.get(`/tasks/${taskId}/comments`);
       setComments(res.data);
     } catch (err) {
       console.error(err);
@@ -66,7 +65,7 @@ export default function CaseDetail() {
 
   const fetchEvidence = async (taskId) => {
     try {
-      const res = await axios.get(`${API}/tasks/${taskId}/evidence`);
+      const res = await api.get(`/tasks/${taskId}/evidence`);
       setEvidence(res.data);
     } catch (err) {
       console.error(err);
@@ -81,7 +80,7 @@ export default function CaseDetail() {
   const toggleTaskStatus = async (task) => {
     const newStatus = task.status === "done" ? "open" : "done";
     try {
-      await axios.patch(`${API}/tasks/${task.id}/status?new_status=${newStatus}`);
+      await api.patch(`/tasks/${task.id}/status?new_status=${newStatus}`);
       toast.success(newStatus === "done" ? "Task erledigt!" : "Task wieder geöffnet");
       fetchCase();
       if (selectedTask?.id === task.id) {
@@ -106,7 +105,7 @@ export default function CaseDetail() {
     formData.append("file", file);
     
     try {
-      await axios.post(`${API}/tasks/${selectedTask.id}/evidence`, formData, {
+      await api.post(`/tasks/${selectedTask.id}/evidence`, formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       toast.success("Nachweis hochgeladen");
@@ -122,7 +121,7 @@ export default function CaseDetail() {
 
   const downloadEvidence = async (ev) => {
     try {
-      const res = await axios.get(`${API}/evidence/${ev.id}/download`, { responseType: "blob" });
+      const res = await api.get(`/evidence/${ev.id}/download`, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -138,7 +137,7 @@ export default function CaseDetail() {
   const deleteEvidence = async (ev) => {
     if (!window.confirm("Nachweis wirklich löschen?")) return;
     try {
-      await axios.delete(`${API}/evidence/${ev.id}`);
+      await api.delete(`/evidence/${ev.id}`);
       toast.success("Nachweis gelöscht");
       fetchEvidence(selectedTask.id);
       fetchCase();
@@ -150,7 +149,7 @@ export default function CaseDetail() {
   const addComment = async () => {
     if (!newComment.trim() || !selectedTask) return;
     try {
-      await axios.post(`${API}/tasks/${selectedTask.id}/comments`, { body: newComment });
+      await api.post(`/tasks/${selectedTask.id}/comments`, { body: newComment });
       setNewComment("");
       fetchComments(selectedTask.id);
       toast.success("Kommentar hinzugefügt");
@@ -162,7 +161,7 @@ export default function CaseDetail() {
   const reschedule = async () => {
     if (!newStartDate) return;
     try {
-      await axios.patch(`${API}/cases/${id}/reschedule`, { new_start_date: newStartDate.toISOString() });
+      await api.patch(`/cases/${id}/reschedule`, { new_start_date: newStartDate.toISOString() });
       toast.success("Datum aktualisiert");
       setShowReschedule(false);
       fetchCase();
@@ -173,7 +172,7 @@ export default function CaseDetail() {
 
   const updateCaseStatus = async (status) => {
     try {
-      await axios.patch(`${API}/cases/${id}/status?new_status=${status}`);
+      await api.patch(`/cases/${id}/status?new_status=${status}`);
       toast.success("Status aktualisiert");
       fetchCase();
     } catch (err) {
@@ -183,7 +182,7 @@ export default function CaseDetail() {
 
   const downloadReport = async () => {
     try {
-      const res = await axios.get(`${API}/cases/${id}/report`, { responseType: "blob" });
+      const res = await api.get(`/cases/${id}/report`, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = url;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -19,8 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 export default function AdminUsers() {
   const { isSuperAdmin } = useAuth();
@@ -43,7 +42,7 @@ export default function AdminUsers() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/admin/users`);
+      const response = await api.get(`/admin/users`);
       setUsers(response.data);
     } catch (err) {
       toast.error("Fehler beim Laden der Benutzer");
@@ -55,7 +54,7 @@ export default function AdminUsers() {
   const toggleUserStatus = async (user) => {
     const newStatus = user.status === "blocked" ? "active" : "blocked";
     try {
-      await axios.patch(`${API}/admin/users/${user.id}/status?new_status=${newStatus}`);
+      await api.patch(`/admin/users/${user.id}/status?new_status=${newStatus}`);
       toast.success(`Benutzer ${newStatus === "blocked" ? "gesperrt" : "aktiviert"}`);
       fetchUsers();
     } catch (err) {
@@ -69,7 +68,7 @@ export default function AdminUsers() {
       return;
     }
     try {
-      await axios.post(`${API}/admin/users/${selectedUser.id}/reset-password?new_password=${encodeURIComponent(newPassword)}`);
+      await api.post(`/admin/users/${selectedUser.id}/reset-password?new_password=${encodeURIComponent(newPassword)}`);
       toast.success("Passwort erfolgreich zurückgesetzt");
       setShowPasswordDialog(false);
       setNewPassword("");

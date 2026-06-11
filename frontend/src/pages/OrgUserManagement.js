@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -37,8 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 
 export default function OrgUserManagement() {
   const { user, isAdmin } = useAuth();
@@ -76,9 +75,9 @@ export default function OrgUserManagement() {
     try {
       setLoading(true);
       const [usersRes, orgRes, deptsRes] = await Promise.all([
-        axios.get(`${API}/org/users`),
-        axios.get(`${API}/org/info`),
-        axios.get(`${API}/departments`)
+        api.get(`/org/users`),
+        api.get(`/org/info`),
+        api.get(`/departments`)
       ]);
       setUsers(usersRes.data);
       setOrgInfo(orgRes.data);
@@ -104,7 +103,7 @@ export default function OrgUserManagement() {
         ...newUser,
         department_id: newUser.department_id || null
       };
-      await axios.post(`${API}/org/users`, payload);
+      await api.post(`/org/users`, payload);
       toast.success(`Benutzer "${newUser.name}" erfolgreich erstellt`);
       setShowAddUserDialog(false);
       setNewUser({ name: "", email: "", password: "", role: "user", department_id: "" });
@@ -117,7 +116,7 @@ export default function OrgUserManagement() {
   const updateDepartment = async () => {
     if (!selectedUser) return;
     try {
-      await axios.patch(`${API}/org/users/${selectedUser.id}/department?department_id=${newDepartmentId || ""}`);
+      await api.patch(`/org/users/${selectedUser.id}/department?department_id=${newDepartmentId || ""}`);
       toast.success("Abteilung erfolgreich geändert");
       setShowDepartmentDialog(false);
       setSelectedUser(null);
@@ -131,7 +130,7 @@ export default function OrgUserManagement() {
   const toggleUserStatus = async (targetUser) => {
     const newStatus = targetUser.status === "blocked" ? "active" : "blocked";
     try {
-      await axios.patch(`${API}/org/users/${targetUser.id}/status?new_status=${newStatus}`);
+      await api.patch(`/org/users/${targetUser.id}/status?new_status=${newStatus}`);
       toast.success(`Benutzer ${newStatus === "blocked" ? "gesperrt" : "aktiviert"}`);
       fetchData();
     } catch (err) {
@@ -145,7 +144,7 @@ export default function OrgUserManagement() {
       return;
     }
     try {
-      await axios.post(`${API}/org/users/${selectedUser.id}/reset-password?new_password=${encodeURIComponent(newPassword)}`);
+      await api.post(`/org/users/${selectedUser.id}/reset-password?new_password=${encodeURIComponent(newPassword)}`);
       toast.success("Passwort erfolgreich zurückgesetzt");
       setShowPasswordDialog(false);
       setNewPassword("");
@@ -158,7 +157,7 @@ export default function OrgUserManagement() {
   const updateRole = async () => {
     if (!selectedUser) return;
     try {
-      await axios.patch(`${API}/org/users/${selectedUser.id}/role?role=${newRole}`);
+      await api.patch(`/org/users/${selectedUser.id}/role?role=${newRole}`);
       toast.success(`Rolle auf "${newRole}" geändert`);
       setShowRoleDialog(false);
       setSelectedUser(null);
@@ -171,7 +170,7 @@ export default function OrgUserManagement() {
   const deleteUser = async () => {
     if (!selectedUser) return;
     try {
-      await axios.delete(`${API}/org/users/${selectedUser.id}`);
+      await api.delete(`/org/users/${selectedUser.id}`);
       toast.success("Benutzer erfolgreich gelöscht");
       setShowDeleteDialog(false);
       setSelectedUser(null);
