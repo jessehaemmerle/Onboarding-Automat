@@ -1,0 +1,26 @@
+# Caddy Reverse-Proxy Konfiguration für Onboarding-Automat
+# Ersetze "yourdomain.com" mit deiner echten Domain.
+# Caddy bezieht automatisch ein TLS-Zertifikat via Let's Encrypt.
+
+yourdomain.com {
+    # Alle Requests an den nginx-Container weiterleiten (der intern /api/ → Backend proxied)
+    reverse_proxy localhost:8081 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Sicherheits-Header
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Logging
+    log {
+        output file /var/log/caddy/onboarding-automat.log
+        format json
+    }
+}

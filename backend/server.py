@@ -173,7 +173,7 @@ async def ensure_super_admin():
         
         if existing_super_admin:
             # Update password and ensure is_super_admin flag is set
-            hashed_password = pwd_context.hash(admin_password)
+            hashed_password = get_password_hash(admin_password)
             await db.users.update_one(
                 {"email": admin_email},
                 {"$set": {
@@ -198,8 +198,8 @@ async def ensure_super_admin():
             "id": str(uuid.uuid4()),
             "email": admin_email,
             "name": admin_name,
-            "hashed_password": pwd_context.hash(admin_password),
-            "password_hash": pwd_context.hash(admin_password),
+            "hashed_password": get_password_hash(admin_password),
+            "password_hash": get_password_hash(admin_password),
             "role": "admin",
             "is_super_admin": True,
             "organization_id": None,
@@ -977,7 +977,7 @@ async def update_user_status(user_id: str, new_status: str, admin: dict = Depend
         new_value=new_status
     )
     
-    return {"message": f"Benutzer-Status auf '{status}' gesetzt", "user_id": user_id}
+    return {"message": f"Benutzer-Status auf '{new_status}' gesetzt", "user_id": user_id}
 
 @api_router.post("/admin/users/{user_id}/reset-password")
 async def admin_reset_password(user_id: str, new_password: str, admin: dict = Depends(require_super_admin)):
@@ -1245,8 +1245,8 @@ async def create_org_user(user_data: OrgUserCreate, current_user: dict = Depends
         "id": str(uuid.uuid4()),
         "email": user_data.email,
         "name": user_data.name,
-        "hashed_password": pwd_context.hash(user_data.password),
-        "password_hash": pwd_context.hash(user_data.password),
+        "hashed_password": get_password_hash(user_data.password),
+        "password_hash": get_password_hash(user_data.password),
         "role": user_data.role,
         "department_id": user_data.department_id,
         "organization_id": org_id,

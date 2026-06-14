@@ -37,7 +37,7 @@ services:
       SUPER_ADMIN_NAME: ${SUPER_ADMIN_NAME:-Super Admin}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       SENDER_EMAIL: ${SENDER_EMAIL:-onboarding@resend.dev}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://127.0.0.1,http://localhost:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://127.0.0.1,http://localhost:3000,http://localhost:8081}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -56,7 +56,7 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "80:80"
+      - "8081:80"
 
 volumes:
   mongodb_data:
