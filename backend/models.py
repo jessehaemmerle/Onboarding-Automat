@@ -1,4 +1,4 @@
-"""Shared Pydantic models for OnboardIQ API."""
+"""Shared Pydantic models for Welkora API."""
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 

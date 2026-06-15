@@ -548,7 +548,7 @@ async def get_case_report(case_id: str, current_user: dict = Depends(get_current
             {''.join([f"<tr><td>{t['title']}</td><td>{t['category']}</td><td>{t['owner_role_snapshot']}</td><td>{t['due_date'][:10]}</td><td><span class='status {t['status']}'>{'Erledigt' if t['status']=='done' else 'Offen'}</span></td><td>{(t.get('completed_at','')[:10] if t.get('completed_at') else '-')}</td></tr>" for t in tasks])}
         </tbody>
     </table>
-    <div class="footer"><p>Erstellt am {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')} UTC • OnboardIQ</p></div>
+    <div class="footer"><p>Erstellt am {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')} UTC • Welkora</p></div>
 </body>
 </html>"""
 

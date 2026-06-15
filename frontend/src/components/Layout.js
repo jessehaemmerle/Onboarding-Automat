@@ -86,7 +86,7 @@ export default function Layout() {
   const SidebarContent = () => (
     <>
       <div className="p-6 border-b border-slate-100">
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">OnboardIQ</h1>
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Welkora</h1>
         <p className="text-xs text-slate-500 mt-1">HR-Automatisierung</p>
       </div>
 

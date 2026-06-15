@@ -10,7 +10,7 @@ import { Badge } from "./ui/badge";
 import { CheckCircle2, ArrowRight, Users, Tags, Building2, Sparkles } from "lucide-react";
 
 const STEPS = [
-  { id: "welcome",    title: "Willkommen bei OnboardIQ", icon: Sparkles },
+  { id: "welcome",    title: "Willkommen bei Welkora", icon: Sparkles },
   { id: "role",       title: "Erste Rolle anlegen",       icon: Users },
   { id: "category",   title: "Erste Kategorie anlegen",   icon: Tags },
   { id: "done",       title: "Fertig!",                   icon: CheckCircle2 },
@@ -105,7 +105,7 @@ export default function OnboardingWizard({ open, onClose }) {
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-blue-600" /> Willkommen bei OnboardIQ!
+                <Sparkles className="w-5 h-5 text-blue-600" /> Willkommen bei Welkora!
               </DialogTitle>
               <DialogDescription>
                 Lassen Sie uns in 2 Minuten Ihre Organisation einrichten. Dieser Wizard hilft Ihnen, die ersten Rollen und Kategorien anzulegen.

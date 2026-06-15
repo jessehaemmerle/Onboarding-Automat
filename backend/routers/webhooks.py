@@ -101,10 +101,10 @@ async def dispatch_webhook(organization_id: str, event: str, payload: dict):
     body = json.dumps({"event": event, "timestamp": datetime.now(timezone.utc).isoformat(), "data": payload})
 
     async def _send(wh: dict):
-        headers = {"Content-Type": "application/json", "X-OnboardIQ-Event": event}
+        headers = {"Content-Type": "application/json", "X-Welkora-Event": event}
         if wh.get("secret"):
             sig = hmac.new(wh["secret"].encode(), body.encode(), hashlib.sha256).hexdigest()
-            headers["X-OnboardIQ-Signature"] = f"sha256={sig}"
+            headers["X-Welkora-Signature"] = f"sha256={sig}"
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 await client.post(wh["url"], content=body, headers=headers)

@@ -34,7 +34,7 @@ export default function AdminLayout() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-white tracking-tight">System Admin</h1>
-              <p className="text-xs text-slate-400">OnboardIQ</p>
+              <p className="text-xs text-slate-400">Welkora</p>
             </div>
           </div>
         </div>

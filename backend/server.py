@@ -36,7 +36,7 @@ except ImportError:  # pragma: no cover - fallback for direct module execution
     )
     from config import client, db, logger  # type: ignore
 
-app = FastAPI(title="OnboardIQ API")
+app = FastAPI(title="Welkora API")
 api_router = APIRouter(prefix="/api")
 
 # ============ HEALTH CHECK ENDPOINT (for Kubernetes) ============
@@ -2122,7 +2122,7 @@ async def send_sales_notification_email(contact_data: dict):
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 20px; border-radius: 8px 8px 0 0;">
-                <h1 style="color: white; margin: 0; font-size: 24px;">⚡ OnboardIQ</h1>
+                <h1 style="color: white; margin: 0; font-size: 24px;">⚡ Welkora</h1>
                 <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0;">Neue Vertriebsanfrage</p>
             </div>
             <div style="background: #f8fafc; padding: 20px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
@@ -2166,7 +2166,7 @@ async def send_sales_notification_email(contact_data: dict):
         params = {
             "from": SENDER_EMAIL,
             "to": [SALES_EMAIL],
-            "subject": f"[OnboardIQ] Neue Vertriebsanfrage von {contact_data['company']}",
+            "subject": f"[Welkora] Neue Vertriebsanfrage von {contact_data['company']}",
             "html": html
         }
         

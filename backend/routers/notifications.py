@@ -69,12 +69,12 @@ async def notify_case_created(case: dict, tasks: list):
           </tr></thead>
           <tbody>{task_rows}</tbody>
         </table>
-        <p style='color:#6b7280;font-size:13px'>OnboardIQ – HR-Automatisierung</p>
+        <p style='color:#6b7280;font-size:13px'>Welkora – HR-Automatisierung</p>
       </div>
     </div>"""
     await send_email(
         case["manager_email"],
-        f"[OnboardIQ] Neues {case_type_label}: {case['employee_name']}",
+        f"[Welkora] Neues {case_type_label}: {case['employee_name']}",
         manager_html,
     )
 
@@ -91,12 +91,12 @@ async def notify_case_completed(case: dict):
       </div>
       <div style='background:#f0fdf4;padding:24px;border-radius:0 0 12px 12px;border:1px solid #d1fae5'>
         <p>Das {case_type_label} von <strong>{case['employee_name']}</strong> wurde erfolgreich abgeschlossen.</p>
-        <p style='color:#6b7280;font-size:13px'>OnboardIQ – HR-Automatisierung</p>
+        <p style='color:#6b7280;font-size:13px'>Welkora – HR-Automatisierung</p>
       </div>
     </div>"""
     await send_email(
         case["manager_email"],
-        f"[OnboardIQ] {case_type_label} abgeschlossen: {case['employee_name']}",
+        f"[Welkora] {case_type_label} abgeschlossen: {case['employee_name']}",
         html,
     )
 
@@ -116,12 +116,12 @@ async def notify_task_assigned(task: dict, employee_name: str):
           <p style='font-weight:bold;margin:0 0 8px'>{task['title']}</p>
           <p style='color:#6b7280;margin:0;font-size:14px'>Fällig: {task.get('due_date','')[:10]} · {task.get('category','')}</p>
         </div>
-        <p style='color:#6b7280;font-size:13px'>OnboardIQ – HR-Automatisierung</p>
+        <p style='color:#6b7280;font-size:13px'>Welkora – HR-Automatisierung</p>
       </div>
     </div>"""
     await send_email(
         task["owner_email"],
-        f"[OnboardIQ] Neue Aufgabe: {task['title']}",
+        f"[Welkora] Neue Aufgabe: {task['title']}",
         html,
     )
 
@@ -194,11 +194,11 @@ async def daily_reminder_job():
                   <div style='background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb'>
                     {overdue_section}
                     {upcoming_section}
-                    <p style='color:#6b7280;font-size:13px;margin-top:24px'>OnboardIQ – HR-Automatisierung</p>
+                    <p style='color:#6b7280;font-size:13px;margin-top:24px'>Welkora – HR-Automatisierung</p>
                   </div>
                 </div>"""
 
-                await send_email(owner_email, f"[OnboardIQ] Ihre Aufgaben-Übersicht ({len(overdue)} überfällig)", html)
+                await send_email(owner_email, f"[Welkora] Ihre Aufgaben-Übersicht ({len(overdue)} überfällig)", html)
                 sent += 1
 
             logger.info(f"Daily reminders sent to {sent} recipients")

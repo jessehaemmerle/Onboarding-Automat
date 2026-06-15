@@ -12,7 +12,7 @@ import {
   Zap, Mail, Phone, Building2, Users, Send, 
   CheckCircle2, ArrowLeft, Loader2, MessageSquare
 } from "lucide-react";
-
+
 
 export default function Kontakt() {
   const navigate = useNavigate();
@@ -57,7 +57,7 @@ export default function Kontakt() {
             </div>
             <h2 className="text-2xl font-bold text-slate-900 mb-2">Anfrage gesendet!</h2>
             <p className="text-slate-600 mb-6">
-              Vielen Dank für Ihr Interesse an OnboardIQ. Unser Vertriebsteam wird sich 
+              Vielen Dank für Ihr Interesse an Welkora. Unser Vertriebsteam wird sich 
               innerhalb von 24 Stunden bei Ihnen melden.
             </p>
             <div className="space-y-3">
@@ -84,7 +84,7 @@ export default function Kontakt() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-slate-900">OnboardIQ</span>
+              <span className="text-xl font-bold text-slate-900">Welkora</span>
             </button>
             <Button variant="ghost" onClick={() => navigate("/login")}>
               Anmelden
@@ -109,7 +109,7 @@ export default function Kontakt() {
               Vertrieb kontaktieren
             </h1>
             <p className="text-lg text-slate-600 mb-8">
-              Erfahren Sie, wie OnboardIQ Ihre HR-Prozesse automatisieren kann. 
+              Erfahren Sie, wie Welkora Ihre HR-Prozesse automatisieren kann. 
               Unser Team berät Sie gerne und erstellt ein individuelles Angebot.
             </p>
 
@@ -120,7 +120,7 @@ export default function Kontakt() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-slate-900">Persönliche Demo</h3>
-                  <p className="text-slate-600">Wir zeigen Ihnen OnboardIQ live und beantworten alle Fragen.</p>
+                  <p className="text-slate-600">Wir zeigen Ihnen Welkora live und beantworten alle Fragen.</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
@@ -286,13 +286,13 @@ export default function Kontakt() {
             <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded flex items-center justify-center">
               <Zap className="w-4 h-4 text-white" />
             </div>
-            <span className="font-semibold">OnboardIQ</span>
+            <span className="font-semibold">Welkora</span>
           </div>
           <div className="flex gap-6 text-sm text-slate-400">
             <a href="/datenschutz" className="hover:text-white">Datenschutz</a>
             <a href="/impressum" className="hover:text-white">Impressum</a>
           </div>
-          <p className="text-sm text-slate-400">© 2025 OnboardIQ</p>
+          <p className="text-sm text-slate-400">© 2025 Welkora</p>
         </div>
       </footer>
     </div>

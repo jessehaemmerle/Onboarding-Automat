@@ -1,4 +1,4 @@
-"""Shared helper functions for OnboardIQ API."""
+"""Shared helper functions for Welkora API."""
 import uuid
 from datetime import datetime, timezone
 

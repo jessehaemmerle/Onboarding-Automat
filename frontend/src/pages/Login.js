@@ -43,7 +43,7 @@ export default function Login() {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 text-white mb-4">
               <Users className="w-6 h-6" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">OnboardIQ</h1>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Welkora</h1>
             <p className="text-slate-500 mt-2">Onboarding standardisieren, Zeit sparen.</p>
           </div>
 
