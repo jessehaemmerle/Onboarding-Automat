@@ -61,7 +61,7 @@ export default function Kontakt() {
               innerhalb von 24 Stunden bei Ihnen melden.
             </p>
             <div className="space-y-3">
-              <Button onClick={() => navigate("/home")} className="w-full">
+              <Button onClick={() => navigate("/")} className="w-full">
                 Zurück zur Startseite
               </Button>
               <Button variant="outline" onClick={() => navigate("/login")} className="w-full">
@@ -80,7 +80,7 @@ export default function Kontakt() {
       <nav className="bg-white/80 backdrop-blur-md border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <button onClick={() => navigate("/home")} className="flex items-center gap-2">
+            <button onClick={() => navigate("/")} className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
                 <Zap className="w-5 h-5 text-white" />
               </div>
@@ -95,7 +95,7 @@ export default function Kontakt() {
 
       <div className="max-w-6xl mx-auto px-4 py-12">
         <button 
-          onClick={() => navigate("/home")} 
+          onClick={() => navigate("/")} 
           className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-8"
         >
           <ArrowLeft className="w-4 h-4" />

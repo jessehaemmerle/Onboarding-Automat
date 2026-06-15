@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "./components/ui/sonner";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
@@ -34,15 +34,39 @@ import Layout from "./components/Layout";
 import AdminLayout from "./components/AdminLayout";
 import CookieBanner from "./components/CookieBanner";
 
+const Spinner = () => (
+  <div className="min-h-screen flex items-center justify-center bg-slate-50">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+  </div>
+);
+
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
+  const location = useLocation();
+  if (loading) return <Spinner />;
   if (!user) return <Navigate to="/login" />;
   // Force initial password change before accessing the app
-  if (user.must_change_password && window.location.pathname !== "/change-password") {
+  if (user.must_change_password && location.pathname !== "/change-password") {
     return <Navigate to="/change-password" />;
   }
   return children;
+};
+
+// Root shell: anonymous visitors get the public landing page at "/",
+// authenticated users get the app (Layout + nested routes). Any other
+// app path falls back to the login redirect for anonymous visitors.
+const AppShell = () => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return <Spinner />;
+  if (!user) {
+    if (location.pathname === "/") return <LandingPage />;
+    return <Navigate to="/login" replace />;
+  }
+  if (user.must_change_password && location.pathname !== "/change-password") {
+    return <Navigate to="/change-password" replace />;
+  }
+  return <Layout />;
 };
 
 // Route für Super-Admin-Bereich
@@ -60,7 +84,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Public Routes */}
-          <Route path="/home" element={<LandingPage />} />
+          <Route path="/home" element={<Navigate to="/" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -80,8 +104,8 @@ function App() {
             <Route path="audit-log" element={<AdminAuditLog />} />
           </Route>
           
-          {/* Main App Routes */}
-          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          {/* Main App Routes — landing for anon, dashboard for authed users */}
+          <Route path="/" element={<AppShell />}>
             <Route index element={<Dashboard />} />
             <Route path="cases" element={<Cases />} />
             <Route path="cases/:id" element={<CaseDetail />} />

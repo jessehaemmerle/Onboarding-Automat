@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /privacy
+Disallow: /settings
+
+Sitemap: https://welkora.net/sitemap.xml
