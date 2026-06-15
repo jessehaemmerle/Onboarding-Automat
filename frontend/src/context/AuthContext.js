@@ -29,6 +29,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Re-fetch the current user without toggling the global loading state.
+  const refreshUser = async () => {
+    try {
+      const res = await api.get("/auth/me");
+      setUser(res.data);
+      return res.data;
+    } catch {
+      return null;
+    }
+  };
+
   const login = async (email, password) => {
     const res = await api.post("/auth/login", { email, password });
     localStorage.setItem("token", res.data.access_token);
@@ -55,7 +66,7 @@ export const AuthProvider = ({ children }) => {
   const isSuperAdmin = user?.is_super_admin || false;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAdmin, isSuperAdmin }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser, isAdmin, isSuperAdmin }}>
       {children}
     </AuthContext.Provider>
   );

@@ -38,6 +38,9 @@ SUPER_ADMIN_EMAIL = os.environ.get('SUPER_ADMIN_EMAIL')
 SUPER_ADMIN_PASSWORD = os.environ.get('SUPER_ADMIN_PASSWORD')
 SUPER_ADMIN_NAME = os.environ.get('SUPER_ADMIN_NAME', 'Super Admin')
 
+# Public app URL (used to build links in emails, e.g. password reset)
+APP_URL = os.environ.get('APP_URL', 'https://welkora.net').rstrip('/')
+
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()

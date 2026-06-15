@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-
+
 
 export default function AdminPanel() {
   const { user, isSuperAdmin } = useAuth();
@@ -50,6 +50,18 @@ export default function AdminPanel() {
   const [showRevokeDialog, setShowRevokeDialog] = useState(false);
   const [revokeLicense, setRevokeLicense] = useState(null);
   const [revokeReason, setRevokeReason] = useState("");
+
+  // Create organization form
+  const [orgForm, setOrgForm] = useState({
+    name: "",
+    user_limit: 10,
+    admin_name: "",
+    admin_email: "",
+    admin_password: "",
+  });
+  const [creatingOrg, setCreatingOrg] = useState(false);
+  const [orgResult, setOrgResult] = useState(null);
+  const [showOrgResult, setShowOrgResult] = useState(false);
 
   useEffect(() => {
     if (!isSuperAdmin) {
@@ -214,6 +226,38 @@ export default function AdminPanel() {
     }
   };
 
+  const createOrganization = async () => {
+    if (!orgForm.name || !orgForm.admin_name || !orgForm.admin_email) {
+      toast.error("Bitte Name, Admin-Name und Admin-E-Mail ausfüllen");
+      return;
+    }
+    if (orgForm.admin_password && orgForm.admin_password.length < 8) {
+      toast.error("Passwort muss mindestens 8 Zeichen haben (oder leer lassen für automatische Generierung)");
+      return;
+    }
+    setCreatingOrg(true);
+    try {
+      const payload = {
+        name: orgForm.name,
+        user_limit: parseInt(orgForm.user_limit) || 10,
+        admin_name: orgForm.admin_name,
+        admin_email: orgForm.admin_email,
+      };
+      if (orgForm.admin_password) payload.admin_password = orgForm.admin_password;
+
+      const response = await api.post(`/admin/organizations`, payload);
+      setOrgResult(response.data);
+      setShowOrgResult(true);
+      toast.success(`Organisation "${orgForm.name}" erstellt`);
+      setOrgForm({ name: "", user_limit: 10, admin_name: "", admin_email: "", admin_password: "" });
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Fehler beim Erstellen der Organisation");
+    } finally {
+      setCreatingOrg(false);
+    }
+  };
+
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast.success("In Zwischenablage kopiert!");
@@ -331,9 +375,10 @@ export default function AdminPanel() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="licenses" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="licenses">Lizenz-Verwaltung</TabsTrigger>
           <TabsTrigger value="generate">Lizenzen Generieren</TabsTrigger>
+          <TabsTrigger value="create-org">Organisation erstellen</TabsTrigger>
           <TabsTrigger value="organizations">Organisationen</TabsTrigger>
         </TabsList>
 
@@ -559,6 +604,86 @@ export default function AdminPanel() {
           </Card>
         </TabsContent>
 
+        {/* Create Organization Tab */}
+        <TabsContent value="create-org" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-purple-600" />
+                Neue Organisation + Admin anlegen
+              </CardTitle>
+              <CardDescription>
+                Erstellt eine Organisation inklusive Lizenz und einem Administrator-Benutzer.
+                Das Initial-Passwort wird per E-Mail versendet und hier angezeigt.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="org-name">Organisationsname *</Label>
+                  <Input
+                    id="org-name"
+                    placeholder="z.B. Muster GmbH"
+                    value={orgForm.name}
+                    onChange={(e) => setOrgForm({ ...orgForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="org-limit">Benutzer-Limit</Label>
+                  <Input
+                    id="org-limit"
+                    type="number"
+                    min="-1"
+                    value={orgForm.user_limit}
+                    onChange={(e) => setOrgForm({ ...orgForm, user_limit: e.target.value })}
+                  />
+                  <p className="text-xs text-slate-500">-1 für unbegrenzt</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="org-admin-name">Admin-Name *</Label>
+                  <Input
+                    id="org-admin-name"
+                    placeholder="Max Mustermann"
+                    value={orgForm.admin_name}
+                    onChange={(e) => setOrgForm({ ...orgForm, admin_name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="org-admin-email">Admin-E-Mail *</Label>
+                  <Input
+                    id="org-admin-email"
+                    type="email"
+                    placeholder="admin@muster.de"
+                    value={orgForm.admin_email}
+                    onChange={(e) => setOrgForm({ ...orgForm, admin_email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="org-admin-password">Initial-Passwort (optional)</Label>
+                  <Input
+                    id="org-admin-password"
+                    type="text"
+                    placeholder="Leer lassen für automatische Generierung"
+                    value={orgForm.admin_password}
+                    onChange={(e) => setOrgForm({ ...orgForm, admin_password: e.target.value })}
+                  />
+                  <p className="text-xs text-slate-500">
+                    Wird das Feld leer gelassen, generiert das System ein sicheres Passwort.
+                    Der Admin muss es beim ersten Login ändern.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t flex justify-end">
+                <Button onClick={createOrganization} disabled={creatingOrg}>
+                  {creatingOrg ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Building2 className="w-4 h-4 mr-2" />}
+                  Organisation erstellen
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Organizations Tab */}
         <TabsContent value="organizations" className="space-y-4">
           <Card>
@@ -687,6 +812,55 @@ export default function AdminPanel() {
               <UserPlus className="w-4 h-4 mr-2" />
               Benutzer hinzufügen
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Organization Created Result Dialog */}
+      <Dialog open={showOrgResult} onOpenChange={setShowOrgResult}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-700">
+              <CheckCircle className="w-5 h-5" />
+              Organisation erstellt
+            </DialogTitle>
+            <DialogDescription>
+              Übergeben Sie diese Zugangsdaten sicher an den neuen Administrator.
+            </DialogDescription>
+          </DialogHeader>
+          {orgResult && (
+            <div className="space-y-4 py-4">
+              <div className="bg-slate-50 border rounded-lg p-4 space-y-2 text-sm">
+                <div className="flex justify-between gap-4">
+                  <span className="text-slate-500">Admin-E-Mail:</span>
+                  <span className="font-medium break-all">{orgResult.admin_email}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-slate-500">Initial-Passwort:</span>
+                  <span className="flex items-center gap-2">
+                    <code className="font-mono font-bold bg-white px-2 py-1 rounded border">{orgResult.initial_password}</code>
+                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard(orgResult.initial_password)}>
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-slate-500">Lizenzschlüssel:</span>
+                  <code className="font-mono text-xs">{orgResult.license_key}</code>
+                </div>
+              </div>
+              <div className={`text-sm rounded-lg p-3 ${orgResult.email_sent ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-800"}`}>
+                {orgResult.email_sent
+                  ? "✅ Eine E-Mail mit den Zugangsdaten wurde versendet."
+                  : "⚠️ E-Mail konnte nicht versendet werden (E-Mail-Dienst nicht konfiguriert). Bitte Passwort manuell übergeben."}
+              </div>
+              <p className="text-xs text-slate-500">
+                Der Administrator wird beim ersten Login aufgefordert, das Passwort zu ändern.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setShowOrgResult(false)}>Schließen</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

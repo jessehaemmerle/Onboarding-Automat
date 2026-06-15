@@ -8,6 +8,9 @@ import uuid
 from datetime import datetime, timezone, timedelta
 import io
 import asyncio
+import secrets
+import hashlib
+import string
 
 try:
     from .auth import (
@@ -21,7 +24,8 @@ try:
         verify_master_key,
         verify_password,
     )
-    from .config import client, db, logger
+    from .config import client, db, logger, APP_URL
+    from .routers.notifications import send_email
 except ImportError:  # pragma: no cover - fallback for direct module execution
     from auth import (  # type: ignore
         create_access_token,
@@ -34,7 +38,8 @@ except ImportError:  # pragma: no cover - fallback for direct module execution
         verify_master_key,
         verify_password,
     )
-    from config import client, db, logger  # type: ignore
+    from config import client, db, logger, APP_URL  # type: ignore
+    from routers.notifications import send_email  # type: ignore
 
 app = FastAPI(title="Welkora API")
 api_router = APIRouter(prefix="/api")
@@ -155,7 +160,11 @@ async def create_indexes():
         
         # License key lookup
         await db.license_keys.create_index([("key", 1), ("status", 1)])
-        
+
+        # Password reset token lookup
+        await db.password_resets.create_index("token_hash")
+        await db.password_resets.create_index("user_id")
+
         logger.info("✅ Database indexes created successfully")
     except Exception as e:
         logger.warning(f"Index creation: {e} (may already exist)")
@@ -259,6 +268,16 @@ class OrganizationResponse(OrganizationBase):
     status: str
     created_at: str
 
+class AdminOrgCreate(BaseModel):
+    """Super-Admin: create an organization together with its admin user."""
+    name: str
+    user_limit: int = 10
+    admin_name: str
+    admin_email: EmailStr
+    # If omitted, a secure initial password is generated automatically.
+    admin_password: Optional[str] = None
+    notes: str = ""
+
 # User Models
 class UserBase(BaseModel):
     email: EmailStr
@@ -274,6 +293,19 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+class ChangePasswordRequest(BaseModel):
+    # current_password is optional: not required when the user must change an
+    # initial password (must_change_password flag set).
+    current_password: Optional[str] = None
+    new_password: str
+
 class UserResponse(UserBase):
     id: str
     organization_id: Optional[str] = None
@@ -282,6 +314,7 @@ class UserResponse(UserBase):
     created_at: str
     department_id: Optional[str] = None
     department_name: Optional[str] = None
+    must_change_password: bool = False
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -531,6 +564,95 @@ async def log_audit(
     logger.info(f"AUDIT: {user.get('email', 'system')} - {action} - {resource_type} - {resource_id}")
     return audit_entry
 
+# ============ AUTH / PASSWORD HELPERS ============
+
+def generate_secure_password(length: int = 14) -> str:
+    """Generate a human-friendly but secure random password."""
+    alphabet = string.ascii_letters + string.digits + "!@#%*?-_"
+    # Ensure at least one of each class for password policies
+    while True:
+        pwd = "".join(secrets.choice(alphabet) for _ in range(length))
+        if (any(c.islower() for c in pwd) and any(c.isupper() for c in pwd)
+                and any(c.isdigit() for c in pwd)):
+            return pwd
+
+
+def _hash_token(token: str) -> str:
+    """SHA-256 hash for storing password-reset tokens (never store raw)."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+async def create_org_defaults(org_id: str):
+    """Create default owner roles, categories and departments for a new org."""
+    default_roles = [
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "IT", "emails": []},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "HR", "emails": []},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Office", "emails": []},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Manager", "emails": []},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Security", "emails": []},
+    ]
+    await db.owner_roles.insert_many(default_roles)
+
+    default_categories = [
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "IT", "color": "#3b82f6"},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Admin", "color": "#8b5cf6"},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Manager", "color": "#10b981"},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "HR", "color": "#f59e0b"},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Security", "color": "#ef4444"},
+    ]
+    await db.categories.insert_many(default_categories)
+
+    default_departments = [
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "IT", "color": "#3b82f6"},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "HR", "color": "#f59e0b"},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Management", "color": "#10b981"},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Office", "color": "#8b5cf6"},
+        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Security", "color": "#ef4444"},
+    ]
+    await db.departments.insert_many(default_departments)
+
+
+def _email_layout(title: str, body_html: str) -> str:
+    return f"""
+    <div style='font-family:sans-serif;max-width:600px;margin:auto'>
+      <div style='background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:24px;border-radius:12px 12px 0 0'>
+        <h1 style='color:white;margin:0;font-size:22px'>⚡ Welkora</h1>
+      </div>
+      <div style='background:#f8fafc;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0'>
+        <h2 style='color:#0f172a;margin-top:0'>{title}</h2>
+        {body_html}
+        <p style='color:#94a3b8;font-size:12px;margin-top:24px'>Welkora – HR-Automatisierung · <a href="{APP_URL}" style="color:#2563eb">{APP_URL}</a></p>
+      </div>
+    </div>"""
+
+
+async def send_initial_password_email(to_email: str, name: str, org_name: str, password: str):
+    """Send login credentials to a newly created admin user."""
+    login_url = f"{APP_URL}/login"
+    body = f"""
+        <p>Hallo {name},</p>
+        <p>für Ihre Organisation <strong>{org_name}</strong> wurde bei Welkora ein Administrator-Zugang angelegt.</p>
+        <div style='background:white;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0'>
+          <p style='margin:0 0 6px'><strong>E-Mail:</strong> {to_email}</p>
+          <p style='margin:0'><strong>Initial-Passwort:</strong> <code style='font-size:15px'>{password}</code></p>
+        </div>
+        <p>Bitte melden Sie sich an und ändern Sie Ihr Passwort umgehend.</p>
+        <p><a href="{login_url}" style="display:inline-block;background:#2563eb;color:white;text-decoration:none;padding:10px 18px;border-radius:8px">Jetzt anmelden</a></p>
+    """
+    return await send_email(to_email, "[Welkora] Ihr Administrator-Zugang", _email_layout("Willkommen bei Welkora", body))
+
+
+async def send_password_reset_email(to_email: str, name: str, reset_url: str):
+    body = f"""
+        <p>Hallo {name},</p>
+        <p>Sie haben das Zurücksetzen Ihres Passworts angefordert. Der Link ist 1 Stunde gültig.</p>
+        <p><a href="{reset_url}" style="display:inline-block;background:#2563eb;color:white;text-decoration:none;padding:10px 18px;border-radius:8px">Passwort zurücksetzen</a></p>
+        <p style='color:#64748b;font-size:13px'>Falls Sie das nicht angefordert haben, ignorieren Sie diese E-Mail – Ihr Passwort bleibt unverändert.</p>
+        <p style='color:#64748b;font-size:12px'>Link funktioniert nicht? Kopieren Sie diese Adresse in den Browser:<br>{reset_url}</p>
+    """
+    return await send_email(to_email, "[Welkora] Passwort zurücksetzen", _email_layout("Passwort zurücksetzen", body))
+
+
 # ============ LICENSE & ORGANIZATION ROUTES ============
 
 @api_router.post("/admin/generate-license-keys", response_model=List[LicenseKeyResponse])
@@ -618,36 +740,9 @@ async def register_organization(data: OrganizationCreate):
         }}
     )
     
-    # Create default owner roles for the organization
-    default_roles = [
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "IT", "emails": []},
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "HR", "emails": []},
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Office", "emails": []},
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Manager", "emails": []},
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Security", "emails": []},
-    ]
-    await db.owner_roles.insert_many(default_roles)
-    
-    # Create default categories for the organization
-    default_categories = [
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "IT", "color": "#3b82f6"},
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Admin", "color": "#8b5cf6"},
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Manager", "color": "#10b981"},
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "HR", "color": "#f59e0b"},
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Security", "color": "#ef4444"},
-    ]
-    await db.categories.insert_many(default_categories)
-    
-    # Create default departments for the organization
-    default_departments = [
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "IT", "color": "#3b82f6"},
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "HR", "color": "#f59e0b"},
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Management", "color": "#10b981"},
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Office", "color": "#8b5cf6"},
-        {"id": str(uuid.uuid4()), "organization_id": org_id, "name": "Security", "color": "#ef4444"},
-    ]
-    await db.departments.insert_many(default_departments)
-    
+    # Create default owner roles, categories and departments for the organization
+    await create_org_defaults(org_id)
+
     logger.info(f"New organization registered: {data.name} (ID: {org_id})")
     
     # Generate token
@@ -932,6 +1027,97 @@ async def get_all_organizations(admin: dict = Depends(require_super_admin)):
         org["case_count"] = await db.cases.count_documents({"organization_id": org["id"]})
     
     return orgs
+
+@api_router.post("/admin/organizations")
+async def admin_create_organization(data: AdminOrgCreate, admin: dict = Depends(require_super_admin)):
+    """Super-Admin: create an organization together with its admin user.
+
+    Generates an internal license key, an initial password (if none is provided)
+    and emails the credentials to the new admin. The initial password is also
+    returned in the response so the super admin can hand it over manually if
+    email delivery is not configured.
+    """
+    # Check email uniqueness
+    existing_user = await db.users.find_one({"email": data.admin_email}, {"_id": 0, "id": 1})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="E-Mail-Adresse wird bereits verwendet")
+
+    if data.user_limit < 1 and data.user_limit != -1:
+        raise HTTPException(status_code=400, detail="Benutzer-Limit muss mindestens 1 sein (oder -1 für unbegrenzt)")
+
+    # Determine initial password
+    generated = not bool(data.admin_password)
+    initial_password = data.admin_password or generate_secure_password()
+    if len(initial_password) < 8:
+        raise HTTPException(status_code=400, detail="Passwort muss mindestens 8 Zeichen haben")
+
+    now = datetime.now(timezone.utc).isoformat()
+    org_id = str(uuid.uuid4())
+
+    # Create an internal license key so the org fits the existing licensing model
+    license_key = generate_license_key()
+    await db.license_keys.insert_one({
+        "id": str(uuid.uuid4()),
+        "key": license_key,
+        "status": "active",
+        "user_limit": data.user_limit,
+        "notes": data.notes or f"Erstellt durch Super-Admin für {data.name}",
+        "created_at": now,
+        "activated_at": now,
+        "organization_id": org_id,
+    })
+
+    # Create organization
+    await db.organizations.insert_one({
+        "id": org_id,
+        "name": data.name,
+        "license_key": license_key,
+        "user_limit": data.user_limit,
+        "status": "active",
+        "created_at": now,
+    })
+
+    # Create admin user
+    hashed = get_password_hash(initial_password)
+    user_id = str(uuid.uuid4())
+    await db.users.insert_one({
+        "id": user_id,
+        "email": data.admin_email,
+        "name": data.admin_name,
+        "role": "admin",
+        "organization_id": org_id,
+        "is_super_admin": False,
+        "hashed_password": hashed,
+        "password_hash": hashed,
+        "status": "active",
+        "must_change_password": True,
+        "created_at": now,
+    })
+
+    await create_org_defaults(org_id)
+
+    await log_audit(
+        user=admin,
+        action="create",
+        resource_type="organization",
+        resource_id=org_id,
+        resource_name=data.name,
+        details=f"Organisation + Admin '{data.admin_email}' durch Super-Admin angelegt",
+    )
+
+    email_sent = await send_initial_password_email(data.admin_email, data.admin_name, data.name, initial_password)
+
+    logger.info(f"Super-Admin created organization '{data.name}' with admin {data.admin_email}")
+
+    return {
+        "message": f"Organisation '{data.name}' erstellt",
+        "organization_id": org_id,
+        "license_key": license_key,
+        "admin_email": data.admin_email,
+        "initial_password": initial_password,
+        "password_generated": generated,
+        "email_sent": email_sent,
+    }
 
 # ============ SUPER-ADMIN FUNCTIONS ============
 
@@ -1631,13 +1817,104 @@ async def login(credentials: UserLogin):
             organization_id=user.get("organization_id", ""),
             organization_name=org_name,
             is_super_admin=user.get("is_super_admin", False),
-            created_at=user["created_at"]
+            created_at=user["created_at"],
+            must_change_password=user.get("must_change_password", False)
         )
     )
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(current_user: dict = Depends(get_current_user)):
     return UserResponse(**current_user)
+
+@api_router.post("/auth/change-password")
+async def change_password(data: ChangePasswordRequest, current_user: dict = Depends(get_current_user)):
+    """Change the password of the currently logged-in user.
+
+    The current password is required unless the user has a pending forced
+    password change (must_change_password), e.g. after an admin created the
+    account with an initial password.
+    """
+    if len(data.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Passwort muss mindestens 8 Zeichen haben")
+
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+
+    must_change = user.get("must_change_password", False)
+    if not must_change:
+        # Normal change: verify current password
+        if not data.current_password or not verify_password(
+            data.current_password, user.get("password_hash", user.get("hashed_password", ""))
+        ):
+            raise HTTPException(status_code=400, detail="Aktuelles Passwort ist falsch")
+
+    hashed = get_password_hash(data.new_password)
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"hashed_password": hashed, "password_hash": hashed, "must_change_password": False}}
+    )
+
+    await log_audit(user=user, action="update", resource_type="auth", details="Passwort geändert")
+    return {"message": "Passwort erfolgreich geändert"}
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest):
+    """Start a password reset. Always returns 200 to avoid leaking which
+    email addresses exist."""
+    generic_response = {"message": "Falls ein Konto mit dieser E-Mail existiert, wurde ein Reset-Link versendet."}
+
+    user = await db.users.find_one({"email": data.email}, {"_id": 0})
+    if not user or user.get("status") == "blocked":
+        return generic_response
+
+    # Create a single-use token (store only its hash)
+    raw_token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    await db.password_resets.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "token_hash": _hash_token(raw_token),
+        "expires_at": expires_at.isoformat(),
+        "used": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    reset_url = f"{APP_URL}/reset-password?token={raw_token}"
+    await send_password_reset_email(user["email"], user.get("name", ""), reset_url)
+    logger.info(f"Password reset requested for {user['email']}")
+    return generic_response
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: ResetPasswordRequest):
+    """Complete a password reset using a token from the email link."""
+    if len(data.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Passwort muss mindestens 8 Zeichen haben")
+
+    record = await db.password_resets.find_one({"token_hash": _hash_token(data.token)}, {"_id": 0})
+    if not record or record.get("used"):
+        raise HTTPException(status_code=400, detail="Ungültiger oder bereits verwendeter Link")
+
+    try:
+        expires_at = datetime.fromisoformat(record["expires_at"])
+    except (ValueError, KeyError):
+        raise HTTPException(status_code=400, detail="Ungültiger Link")
+    if expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Der Link ist abgelaufen. Bitte fordern Sie einen neuen an.")
+
+    user = await db.users.find_one({"id": record["user_id"]}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=400, detail="Ungültiger Link")
+
+    hashed = get_password_hash(data.new_password)
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"hashed_password": hashed, "password_hash": hashed, "must_change_password": False}}
+    )
+    await db.password_resets.update_one({"id": record["id"]}, {"$set": {"used": True}})
+
+    await log_audit(user=user, action="update", resource_type="auth", details="Passwort via Reset-Link zurückgesetzt")
+    return {"message": "Passwort erfolgreich zurückgesetzt. Sie können sich jetzt anmelden."}
 
 # ============ USERS ROUTES ============
 

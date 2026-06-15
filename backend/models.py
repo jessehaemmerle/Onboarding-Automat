@@ -37,6 +37,16 @@ class OrganizationResponse(OrganizationBase):
     status: str
     created_at: str
 
+class AdminOrgCreate(BaseModel):
+    """Super-Admin: create an organization together with its admin user."""
+    name: str
+    user_limit: int = 10
+    admin_name: str
+    admin_email: EmailStr
+    # If omitted, a secure initial password is generated automatically.
+    admin_password: Optional[str] = None
+    notes: str = ""
+
 
 # ===== USERS =====
 
@@ -54,6 +64,19 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+class ChangePasswordRequest(BaseModel):
+    # current_password is optional: not required when the user must change an
+    # initial password (must_change_password flag set).
+    current_password: Optional[str] = None
+    new_password: str
+
 class UserResponse(UserBase):
     id: str
     organization_id: Optional[str] = None
@@ -62,6 +85,7 @@ class UserResponse(UserBase):
     created_at: str
     department_id: Optional[str] = None
     department_name: Optional[str] = None
+    must_change_password: bool = False
 
 class TokenResponse(BaseModel):
     access_token: str

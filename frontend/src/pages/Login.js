@@ -20,9 +20,12 @@ export default function Login() {
     try {
       const response = await login(loginData.email, loginData.password);
       toast.success("Willkommen zurück!");
-      
-      // Super-Admins zum Admin-Bereich weiterleiten
-      if (response.user.is_super_admin) {
+
+      // Erzwungener Passwortwechsel bei Initial-Passwort
+      if (response.user.must_change_password) {
+        navigate("/change-password");
+      } else if (response.user.is_super_admin) {
+        // Super-Admins zum Admin-Bereich weiterleiten
         navigate("/admin");
       } else {
         navigate("/");
@@ -88,6 +91,15 @@ export default function Login() {
                     <>Anmelden <ArrowRight className="w-5 h-5 ml-2" /></>
                   )}
                 </Button>
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/forgot-password")}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    Passwort vergessen?
+                  </button>
+                </div>
               </form>
 
               {/* Organization Registration Link */}
