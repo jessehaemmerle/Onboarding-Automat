@@ -168,12 +168,13 @@ async def ensure_super_admin():
         admin_password = os.environ.get('SUPER_ADMIN_PASSWORD', 'Admin2024!')
         admin_name = os.environ.get('SUPER_ADMIN_NAME', 'Jesse (Super Admin)')
         
+        hashed_password = get_password_hash(admin_password)
+
         # Check if super admin with this email exists
         existing_super_admin = await db.users.find_one({"email": admin_email}, {"_id": 0})
-        
+
         if existing_super_admin:
             # Update password and ensure is_super_admin flag is set
-            hashed_password = get_password_hash(admin_password)
             await db.users.update_one(
                 {"email": admin_email},
                 {"$set": {
@@ -185,31 +186,32 @@ async def ensure_super_admin():
                 }}
             )
             logger.info(f"✅ Super-Admin updated: {admin_email}")
-            return
-        
-        # Check if any other super admin exists
-        any_super_admin = await db.users.find_one({"is_super_admin": True}, {"_id": 0, "email": 1})
-        if any_super_admin:
-            logger.info(f"✅ Super-Admin exists: {any_super_admin.get('email')}")
-            return
-        
-        # Create new Super-Admin
-        super_admin = {
-            "id": str(uuid.uuid4()),
-            "email": admin_email,
-            "name": admin_name,
-            "hashed_password": get_password_hash(admin_password),
-            "password_hash": get_password_hash(admin_password),
-            "role": "admin",
-            "is_super_admin": True,
-            "organization_id": None,
-            "status": "active",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        
-        await db.users.insert_one(super_admin)
-        logger.info(f"✅ Super-Admin created: {admin_email}")
-        
+        else:
+            # Create new Super-Admin (always for the configured email, even if
+            # other super admins already exist in the database)
+            super_admin = {
+                "id": str(uuid.uuid4()),
+                "email": admin_email,
+                "name": admin_name,
+                "hashed_password": hashed_password,
+                "password_hash": hashed_password,
+                "role": "admin",
+                "is_super_admin": True,
+                "organization_id": None,
+                "status": "active",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(super_admin)
+            logger.info(f"✅ Super-Admin created: {admin_email}")
+
+        # Clean up: demote any other super admins so only the configured one remains
+        demoted = await db.users.update_many(
+            {"is_super_admin": True, "email": {"$ne": admin_email}},
+            {"$set": {"is_super_admin": False}}
+        )
+        if demoted.modified_count:
+            logger.info(f"ℹ️ Demoted {demoted.modified_count} other super-admin(s)")
+
     except Exception as e:
         logger.error(f"Error with Super-Admin: {e}")
 
