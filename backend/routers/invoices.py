@@ -22,12 +22,14 @@ try:
     from ..auth import require_super_admin
     from ..config import db, logger
     from .notifications import send_email
-    from .billing import TIER_CONFIG, LicenseTier, get_org_subscription
+    from .billing import get_org_subscription
+    from ..pricing import calculate_price
 except ImportError:  # pragma: no cover - fallback for direct module execution
     from auth import require_super_admin  # type: ignore
     from config import db, logger  # type: ignore
     from routers.notifications import send_email  # type: ignore
-    from routers.billing import TIER_CONFIG, LicenseTier, get_org_subscription  # type: ignore
+    from routers.billing import get_org_subscription  # type: ignore
+    from pricing import calculate_price  # type: ignore
 
 router = APIRouter(prefix="/admin", tags=["Invoicing"])
 
@@ -329,17 +331,27 @@ async def update_org_billing(org_id: str, data: OrgBilling, admin: dict = Depend
 
 @router.get("/organizations/{org_id}/invoice-defaults")
 async def invoice_defaults(org_id: str, admin: dict = Depends(require_super_admin)):
-    """Suggest line items + recipient based on the org's current license tier."""
+    """Suggest line items + recipient based on the org's user count.
+
+    Pricing mirrors the landing-page model (volume tiers, dynamic per user)
+    from pricing.py — e.g. 83 users → €248, 108 users → €269 per month.
+    """
     org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
     if not org:
         raise HTTPException(status_code=404, detail="Organisation nicht gefunden")
 
     subscription = await get_org_subscription(org_id)
-    tier_value = subscription.get("tier", LicenseTier.STARTER.value)
     cycle = subscription.get("billing_cycle", "monthly")
-    tier_config = TIER_CONFIG.get(LicenseTier(tier_value), TIER_CONFIG[LicenseTier.STARTER])
-    price = tier_config["price_yearly"] if cycle == "yearly" else tier_config["price_monthly"]
-    period_label = "Jahr" if cycle == "yearly" else "Monat"
+    annual = cycle == "yearly"
+
+    # Base the price on the licensed seats (user_limit), falling back to the
+    # actual number of users in the organization.
+    user_count = await db.users.count_documents({"organization_id": org_id})
+    licensed = org.get("user_limit") or 0
+    base_users = licensed if licensed and licensed > 0 else max(user_count, 1)
+
+    pricing = calculate_price(base_users, annual=annual)
+    period_label = "Jahr" if annual else "Monat"
 
     today = date.today()
     settings = await get_billing_settings()
@@ -347,13 +359,17 @@ async def invoice_defaults(org_id: str, admin: dict = Depends(require_super_admi
 
     return {
         "line_items": [{
-            "description": f"Welkora {tier_config['name']} Lizenz – {tier_config['user_limit'] if tier_config['user_limit'] != -1 else 'unbegrenzt'} Benutzer ({period_label})",
+            "description": (
+                f"Welkora Lizenz – {base_users} Benutzer · "
+                f"{fmt_eur(pricing['per_user'])} €/Benutzer ({period_label})"
+            ),
             "quantity": 1,
-            "unit_price_net": price,
+            "unit_price_net": pricing["amount"],
         }],
-        "tier": tier_value,
-        "tier_name": tier_config["name"],
+        "license_users": base_users,
+        "user_count": user_count,
         "billing_cycle": cycle,
+        "pricing": pricing,
         "suggested_treatment": determine_treatment(settings, billing or {"country": "AT"}),
         "recipient": billing,
         "issue_date": today.isoformat(),

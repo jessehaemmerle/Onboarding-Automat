@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { calculatePrice, formatEuro } from "../lib/pricing";
 
 const EU_COUNTRIES = new Set([
   "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR",
@@ -61,6 +62,9 @@ export default function AdminInvoices() {
   });
   const [recipient, setRecipient] = useState(emptyRecipient);
   const [lineItems, setLineItems] = useState([{ description: "", quantity: 1, unit_price_net: 0 }]);
+  // License price calculator (mirrors the landing-page pricing model)
+  const [licenseUsers, setLicenseUsers] = useState(0);
+  const [billingCycle, setBillingCycle] = useState("monthly");
 
   useEffect(() => {
     if (!isSuperAdmin) { navigate("/admin/login"); return; }
@@ -123,6 +127,8 @@ export default function AdminInvoices() {
     setForm({ organization_id: "", issue_date: "", service_period_start: "", service_period_end: "", due_days: settings?.payment_terms_days || 14, notes: "", tax_treatment: "auto" });
     setRecipient(emptyRecipient);
     setLineItems([{ description: "", quantity: 1, unit_price_net: 0 }]);
+    setLicenseUsers(0);
+    setBillingCycle("monthly");
     setShowCreate(true);
   };
 
@@ -136,6 +142,8 @@ export default function AdminInvoices() {
         : { ...emptyRecipient, company_name: org?.name || "" };
       setRecipient(rec);
       setLineItems(data.line_items?.length ? data.line_items : [{ description: "", quantity: 1, unit_price_net: 0 }]);
+      setLicenseUsers(data.license_users || data.user_count || 0);
+      setBillingCycle(data.billing_cycle || "monthly");
       setForm((f) => ({
         ...f,
         issue_date: data.issue_date || "",
@@ -145,6 +153,20 @@ export default function AdminInvoices() {
     } catch {
       toast.error("Konnte Vorschlagswerte nicht laden");
     }
+  };
+
+  // Live license price from the shared pricing model
+  const licenseCalc = calculatePrice(licenseUsers || 1);
+  const licenseAmount = billingCycle === "yearly" ? licenseCalc.annual : licenseCalc.monthly;
+
+  const applyLicenseLine = () => {
+    const periodLabel = billingCycle === "yearly" ? "Jahr" : "Monat";
+    setLineItems([{
+      description: `Welkora Lizenz – ${licenseCalc.users} Benutzer · ${formatEuro(licenseCalc.perUser)}/Benutzer (${periodLabel})`,
+      quantity: 1,
+      unit_price_net: licenseAmount,
+    }]);
+    toast.success("Lizenz-Position übernommen");
   };
 
   const updateLine = (idx, key, value) => {
@@ -405,6 +427,42 @@ export default function AdminInvoices() {
                     </div>
                     <Field label="E-Mail (Empfänger)"><Input value={recipient.email} onChange={(e) => setRecipient({ ...recipient, email: e.target.value })} /></Field>
                   </div>
+                </div>
+
+                {/* License price calculator (landing-page model) */}
+                <div className="border rounded-lg p-4 bg-blue-50/50 space-y-3">
+                  <p className="text-sm font-semibold text-slate-700">Lizenz-Preisrechner</p>
+                  <div className="grid sm:grid-cols-3 gap-3 items-end">
+                    <Field label="Anzahl Benutzer">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={licenseUsers}
+                        onChange={(e) => setLicenseUsers(parseInt(e.target.value, 10) || 0)}
+                      />
+                    </Field>
+                    <Field label="Abrechnung">
+                      <Select value={billingCycle} onValueChange={setBillingCycle}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monatlich</SelectItem>
+                          <SelectItem value="yearly">Jährlich (2 Monate gratis)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-slate-900">{formatEuro(licenseAmount)}</p>
+                      <p className="text-xs text-slate-500">
+                        {formatEuro(licenseCalc.perUser)}/Benutzer · {billingCycle === "yearly" ? "pro Jahr" : "pro Monat"}
+                      </p>
+                    </div>
+                  </div>
+                  {licenseCalc.isEnterprise && (
+                    <p className="text-xs text-amber-700">Über 250 Benutzer – ggf. individuelles Angebot prüfen.</p>
+                  )}
+                  <Button type="button" variant="outline" size="sm" onClick={applyLicenseLine}>
+                    Als Rechnungsposition übernehmen
+                  </Button>
                 </div>
 
                 {/* Line items */}
