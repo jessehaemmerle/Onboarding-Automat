@@ -55,6 +55,17 @@ async def health_check():
     """Health check endpoint for Kubernetes liveness/readiness probes"""
     return {"status": "healthy", "service": "onboarding-automat"}
 
+# ============ PUBLIC PRICING CONFIG (single source of truth) ============
+@api_router.get("/pricing")
+async def get_pricing_config():
+    """Public pricing configuration. The frontend (landing-page calculator and
+    invoice creation) consumes this so tier rates live only in backend/pricing.py."""
+    try:
+        from .pricing import pricing_config
+    except ImportError:  # pragma: no cover
+        from pricing import pricing_config  # type: ignore
+    return pricing_config()
+
 # ============ BACKGROUND CRON JOB ============
 
 async def data_retention_cleanup():

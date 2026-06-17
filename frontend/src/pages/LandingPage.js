@@ -14,9 +14,7 @@ import {
   Lock, Sparkles,
 } from "lucide-react";
 import Seo, { SITE_URL } from "../components/Seo";
-import {
-  calculatePrice, formatEuro, PRESET_PLANS, MIN_USERS, MAX_SLIDER_USERS, DEFAULT_USERS,
-} from "../lib/pricing";
+import { calculatePrice, formatEuro, usePricing } from "../lib/pricing";
 
 const FAQS = [
   {
@@ -63,14 +61,16 @@ const BENEFITS = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const [users, setUsers] = useState(DEFAULT_USERS);
+  const { config } = usePricing();
+  const { presetPlans, minUsers, maxSliderUsers } = config;
+  const [users, setUsers] = useState(config.defaultUsers);
   const [annual, setAnnual] = useState(false);
 
-  const price = useMemo(() => calculatePrice(users), [users]);
+  const price = useMemo(() => calculatePrice(users, config), [users, config]);
 
   const jsonLd = useMemo(() => {
-    const low = calculatePrice(PRESET_PLANS[0]).monthly;
-    const high = calculatePrice(PRESET_PLANS[PRESET_PLANS.length - 1]).monthly;
+    const low = calculatePrice(presetPlans[0], config).monthly;
+    const high = calculatePrice(presetPlans[presetPlans.length - 1], config).monthly;
     return [
       {
         "@context": "https://schema.org",
@@ -92,7 +92,7 @@ export default function LandingPage() {
           priceCurrency: "EUR",
           lowPrice: low,
           highPrice: high,
-          offerCount: PRESET_PLANS.length,
+          offerCount: presetPlans.length,
         },
         description: "HR-Automatisierung für Onboarding, Offboarding und Rollenwechsel. DSGVO-konform, mit Audit-Trail und Task-Management.",
       },
@@ -106,12 +106,12 @@ export default function LandingPage() {
         })),
       },
     ];
-  }, []);
+  }, [config, presetPlans]);
 
   const onUsersInput = (val) => {
     const n = parseInt(val, 10);
-    if (Number.isNaN(n)) { setUsers(MIN_USERS); return; }
-    setUsers(Math.min(9999, Math.max(MIN_USERS, n)));
+    if (Number.isNaN(n)) { setUsers(minUsers); return; }
+    setUsers(Math.min(9999, Math.max(minUsers, n)));
   };
 
   return (
@@ -324,7 +324,7 @@ export default function LandingPage() {
                       <Input
                         id="user-count"
                         type="number"
-                        min={MIN_USERS}
+                        min={minUsers}
                         value={users}
                         onChange={(e) => onUsersInput(e.target.value)}
                         className="w-24 text-lg font-semibold"
@@ -333,21 +333,21 @@ export default function LandingPage() {
                     </div>
 
                     <Slider
-                      value={[Math.min(users, MAX_SLIDER_USERS)]}
-                      min={MIN_USERS}
-                      max={MAX_SLIDER_USERS}
+                      value={[Math.min(users, maxSliderUsers)]}
+                      min={minUsers}
+                      max={maxSliderUsers}
                       step={1}
                       onValueChange={([v]) => setUsers(v)}
                       aria-label="Anzahl Benutzer"
                       className="mb-2"
                     />
                     <div className="flex justify-between text-xs text-slate-400">
-                      <span>{MIN_USERS}</span>
-                      <span>{MAX_SLIDER_USERS}+</span>
+                      <span>{minUsers}</span>
+                      <span>{maxSliderUsers}+</span>
                     </div>
 
                     <div className="mt-6 flex flex-wrap gap-2">
-                      {PRESET_PLANS.map((p) => (
+                      {presetPlans.map((p) => (
                         <button
                           key={p}
                           type="button"
@@ -366,7 +366,7 @@ export default function LandingPage() {
                       <div className="py-4">
                         <Sparkles className="w-10 h-10 mx-auto mb-4 text-blue-200" />
                         <p className="text-2xl font-bold mb-2">Enterprise</p>
-                        <p className="text-blue-100 mb-6">Mehr als {MAX_SLIDER_USERS} Benutzer? Wir erstellen Ihnen ein individuelles Angebot.</p>
+                        <p className="text-blue-100 mb-6">Mehr als {maxSliderUsers} Benutzer? Wir erstellen Ihnen ein individuelles Angebot.</p>
                         <Button size="lg" variant="secondary" className="w-full" onClick={() => navigate("/kontakt")}>
                           Angebot anfragen
                         </Button>

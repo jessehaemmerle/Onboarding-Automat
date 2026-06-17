@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { calculatePrice, formatEuro } from "../lib/pricing";
+import { calculatePrice, formatEuro, usePricing } from "../lib/pricing";
 
 const EU_COUNTRIES = new Set([
   "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR",
@@ -45,6 +45,7 @@ const TREATMENT_LABEL = {
 
 export default function AdminInvoices() {
   const { isSuperAdmin } = useAuth();
+  const { config: pricingConfig } = usePricing();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
@@ -155,8 +156,8 @@ export default function AdminInvoices() {
     }
   };
 
-  // Live license price from the shared pricing model
-  const licenseCalc = calculatePrice(licenseUsers || 1);
+  // Live license price from the shared pricing model (backend config)
+  const licenseCalc = calculatePrice(licenseUsers || 1, pricingConfig);
   const licenseAmount = billingCycle === "yearly" ? licenseCalc.annual : licenseCalc.monthly;
 
   const applyLicenseLine = () => {

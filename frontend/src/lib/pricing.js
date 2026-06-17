@@ -1,45 +1,52 @@
-// Central pricing configuration for Welkora.
-// Single source of truth — change rates here and the whole landing page updates.
+// Pricing helpers for Welkora.
+//
+// The tier rates are served by the backend (GET /api/pricing) which is the
+// single source of truth (backend/pricing.py). This module keeps a matching
+// fallback so the public landing page renders instantly and still works if the
+// request fails; once the live config loads, components re-render with it.
 
-// Volume tiers: the per-user rate of the highest reached tier applies to ALL users.
-// Anchor points: 10→€49, 25→€99, 50→€179, 100→€299 (per month).
-export const PRICE_TIERS = [
-  { upTo: 10, rate: 4.9 },
-  { upTo: 25, rate: 3.96 },
-  { upTo: 50, rate: 3.58 },
-  { upTo: 100, rate: 2.99 },
-  { upTo: 250, rate: 2.49 },
-  { upTo: Infinity, rate: 1.99 },
-];
+import { useEffect, useState } from "react";
+import api from "./api";
 
-// Minimum monthly price (covers the smallest plan).
-export const MIN_USERS = 1;
-export const MAX_SLIDER_USERS = 250; // above this we suggest an enterprise offer
-export const DEFAULT_USERS = 25;
+// Fallback config — mirrors backend/pricing.py defaults.
+export const DEFAULT_PRICING_CONFIG = {
+  tiers: [
+    { upTo: 10, rate: 4.9 },
+    { upTo: 25, rate: 3.96 },
+    { upTo: 50, rate: 3.58 },
+    { upTo: 100, rate: 2.99 },
+    { upTo: 250, rate: 2.49 },
+    { upTo: null, rate: 1.99 }, // null = no upper bound (Infinity)
+  ],
+  minUsers: 1,
+  maxSliderUsers: 250,
+  defaultUsers: 25,
+  annualFreeMonths: 2,
+  presetPlans: [10, 25, 50, 100],
+};
 
-// Annual billing grants 2 months free (pay for 10 instead of 12).
-export const ANNUAL_FREE_MONTHS = 2;
-
-// Preset plan cards shown on the pricing section.
-export const PRESET_PLANS = [10, 25, 50, 100];
-
-function rateForUsers(users) {
-  const tier = PRICE_TIERS.find((t) => users <= t.upTo) || PRICE_TIERS[PRICE_TIERS.length - 1];
+function rateForUsers(users, config) {
+  const tiers = config?.tiers?.length ? config.tiers : DEFAULT_PRICING_CONFIG.tiers;
+  const tier = tiers.find((t) => t.upTo == null || users <= t.upTo) || tiers[tiers.length - 1];
   return tier.rate;
 }
 
 /**
  * Calculate pricing for a given number of users.
  * @param {number} usersInput
- * @returns {{users:number, perUser:number, monthly:number, annual:number, annualMonthly:number, isEnterprise:boolean}}
+ * @param {object} [config] pricing config (defaults to the fallback)
  */
-export function calculatePrice(usersInput) {
-  const users = Math.max(MIN_USERS, Math.floor(Number(usersInput) || MIN_USERS));
-  const isEnterprise = users > MAX_SLIDER_USERS;
-  const perUser = rateForUsers(users);
+export function calculatePrice(usersInput, config = DEFAULT_PRICING_CONFIG) {
+  const cfg = config || DEFAULT_PRICING_CONFIG;
+  const minUsers = cfg.minUsers ?? 1;
+  const freeMonths = cfg.annualFreeMonths ?? 2;
+  const maxSlider = cfg.maxSliderUsers ?? DEFAULT_PRICING_CONFIG.maxSliderUsers;
+
+  const users = Math.max(minUsers, Math.floor(Number(usersInput) || minUsers));
+  const isEnterprise = users > maxSlider;
+  const perUser = rateForUsers(users, cfg);
   const monthly = Math.round(users * perUser);
-  // Annual: pay for (12 - free) months, billed yearly.
-  const annual = Math.round(monthly * (12 - ANNUAL_FREE_MONTHS));
+  const annual = Math.round(monthly * (12 - freeMonths));
   const annualMonthly = Math.round(annual / 12);
   return { users, perUser, monthly, annual, annualMonthly, isEnterprise };
 }
@@ -51,4 +58,41 @@ export function formatEuro(value) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+// ---- live config loading (module-level cache shared across components) ----
+let _cache = null;
+let _inflight = null;
+const _subscribers = new Set();
+
+function _load() {
+  if (_cache) return Promise.resolve(_cache);
+  if (!_inflight) {
+    _inflight = api
+      .get("/pricing")
+      .then((res) => {
+        _cache = { ...DEFAULT_PRICING_CONFIG, ...res.data };
+        _subscribers.forEach((fn) => fn(_cache));
+        return _cache;
+      })
+      .catch(() => DEFAULT_PRICING_CONFIG)
+      .finally(() => { _inflight = null; });
+  }
+  return _inflight;
+}
+
+/**
+ * React hook returning the live pricing config (falls back to defaults until
+ * the backend responds). Use with calculatePrice(users, config).
+ */
+export function usePricing() {
+  const [config, setConfig] = useState(_cache || DEFAULT_PRICING_CONFIG);
+  useEffect(() => {
+    let active = true;
+    const update = (c) => active && setConfig(c);
+    _subscribers.add(update);
+    _load().then((c) => active && setConfig(c));
+    return () => { _subscribers.delete(update); };
+  }, []);
+  return { config, loading: !_cache };
 }
