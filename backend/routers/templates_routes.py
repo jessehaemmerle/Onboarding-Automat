@@ -5,12 +5,12 @@ from typing import List, Optional
 import uuid
 
 try:
-    from ..auth import get_current_user, require_admin, get_org_filter
+    from ..auth import get_current_user, require_superior_or_admin, get_org_filter
     from ..config import db
     from ..models import TemplateCreate, TemplateResponse
     from ..routers.billing import check_limit
 except ImportError:  # pragma: no cover
-    from auth import get_current_user, require_admin, get_org_filter  # type: ignore
+    from auth import get_current_user, require_superior_or_admin, get_org_filter  # type: ignore
     from config import db  # type: ignore
     from models import TemplateCreate, TemplateResponse  # type: ignore
     from routers.billing import check_limit  # type: ignore
@@ -43,7 +43,7 @@ async def get_template(template_id: str, current_user: dict = Depends(get_curren
 
 
 @router.post("/templates", response_model=TemplateResponse)
-async def create_template(data: TemplateCreate, admin: dict = Depends(require_admin)):
+async def create_template(data: TemplateCreate, admin: dict = Depends(require_superior_or_admin)):
     org_id = admin.get("organization_id")
     if org_id:
         allowed, message = await check_limit(org_id, "templates", 1)
@@ -74,7 +74,7 @@ async def create_template(data: TemplateCreate, admin: dict = Depends(require_ad
 
 
 @router.put("/templates/{template_id}", response_model=TemplateResponse)
-async def update_template(template_id: str, data: TemplateCreate, admin: dict = Depends(require_admin)):
+async def update_template(template_id: str, data: TemplateCreate, admin: dict = Depends(require_superior_or_admin)):
     now = datetime.now(timezone.utc).isoformat()
     tasks = []
     for t in data.tasks:
@@ -102,7 +102,7 @@ async def update_template(template_id: str, data: TemplateCreate, admin: dict = 
 
 
 @router.delete("/templates/{template_id}")
-async def delete_template(template_id: str, admin: dict = Depends(require_admin)):
+async def delete_template(template_id: str, admin: dict = Depends(require_superior_or_admin)):
     query = {"id": template_id, **get_org_filter(admin)}
     result = await db.templates.delete_one(query)
     if result.deleted_count == 0:
@@ -111,7 +111,7 @@ async def delete_template(template_id: str, admin: dict = Depends(require_admin)
 
 
 @router.post("/templates/{template_id}/duplicate", response_model=TemplateResponse)
-async def duplicate_template(template_id: str, admin: dict = Depends(require_admin)):
+async def duplicate_template(template_id: str, admin: dict = Depends(require_superior_or_admin)):
     query = {"id": template_id, **get_org_filter(admin)}
     original = await db.templates.find_one(query, {"_id": 0})
     if not original:

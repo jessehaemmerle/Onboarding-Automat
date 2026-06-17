@@ -9,10 +9,10 @@ import base64
 import io
 
 try:
-    from ..auth import get_current_user, require_manager_or_admin, get_org_filter
+    from ..auth import get_current_user, require_manager_or_admin, require_superior_or_admin, get_org_filter, can_manage_content
     from ..config import MAX_FILE_SIZE, db, logger
 except ImportError:  # pragma: no cover - fallback for direct module execution
-    from auth import get_current_user, require_manager_or_admin, get_org_filter  # type: ignore
+    from auth import get_current_user, require_manager_or_admin, require_superior_or_admin, get_org_filter, can_manage_content  # type: ignore
     from config import MAX_FILE_SIZE, db, logger  # type: ignore
 
 router = APIRouter(tags=["Tasks"])
@@ -71,8 +71,8 @@ async def get_evidence_policies(current_user: dict = Depends(get_current_user)):
     return policies
 
 @router.post("/evidence-policies", response_model=EvidencePolicyResponse)
-async def create_evidence_policy(data: EvidencePolicyCreate, admin: dict = Depends(require_manager_or_admin)):
-    """Create a new evidence policy - Admin only"""
+async def create_evidence_policy(data: EvidencePolicyCreate, admin: dict = Depends(require_superior_or_admin)):
+    """Create a new evidence policy - Superior/Admin only"""
     org_id = admin.get("organization_id")
     if not org_id:
         raise HTTPException(status_code=400, detail="Keine Organisation zugeordnet")
@@ -102,8 +102,8 @@ async def create_evidence_policy(data: EvidencePolicyCreate, admin: dict = Depen
     return EvidencePolicyResponse(**doc)
 
 @router.put("/evidence-policies/{policy_id}", response_model=EvidencePolicyResponse)
-async def update_evidence_policy(policy_id: str, data: EvidencePolicyCreate, admin: dict = Depends(require_manager_or_admin)):
-    """Update an evidence policy - Admin only"""
+async def update_evidence_policy(policy_id: str, data: EvidencePolicyCreate, admin: dict = Depends(require_superior_or_admin)):
+    """Update an evidence policy - Superior/Admin only"""
     query = {"id": policy_id, **get_org_filter(admin)}
     
     update_data = data.model_dump()
@@ -117,8 +117,8 @@ async def update_evidence_policy(policy_id: str, data: EvidencePolicyCreate, adm
     return EvidencePolicyResponse(**updated)
 
 @router.delete("/evidence-policies/{policy_id}")
-async def delete_evidence_policy(policy_id: str, admin: dict = Depends(require_manager_or_admin)):
-    """Delete an evidence policy - Admin only"""
+async def delete_evidence_policy(policy_id: str, admin: dict = Depends(require_superior_or_admin)):
+    """Delete an evidence policy - Superior/Admin only"""
     query = {"id": policy_id, **get_org_filter(admin)}
     result = await db.evidence_policies.delete_one(query)
     if result.deleted_count == 0:
@@ -227,8 +227,8 @@ async def delete_evidence(evidence_id: str, current_user: dict = Depends(get_cur
     if not evidence:
         raise HTTPException(status_code=404, detail="Nachweis nicht gefunden")
     
-    # Only allow uploader or admin to delete
-    if evidence["uploaded_by"] != current_user["email"] and current_user["role"] != "admin":
+    # Only allow uploader or content managers (admin/superior) to delete
+    if evidence["uploaded_by"] != current_user["email"] and not can_manage_content(current_user):
         raise HTTPException(status_code=403, detail="Keine Berechtigung")
     
     await db.evidence.delete_one({"id": evidence_id})

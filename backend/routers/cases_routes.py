@@ -8,7 +8,10 @@ import io
 import uuid
 
 try:
-    from ..auth import get_current_user, get_org_filter
+    from ..auth import (
+        get_current_user, get_org_filter, require_superior_or_admin,
+        task_scope_query, visible_case_ids, can_modify_task, can_manage_content,
+    )
     from ..config import db, logger
     from ..models import (
         OnboardingCaseCreate, OnboardingCaseResponse,
@@ -19,7 +22,10 @@ try:
     from ..routers.webhooks import dispatch_webhook
     from ..routers.notifications import notify_case_created, notify_case_completed
 except ImportError:  # pragma: no cover
-    from auth import get_current_user, get_org_filter  # type: ignore
+    from auth import (  # type: ignore
+        get_current_user, get_org_filter, require_superior_or_admin,
+        task_scope_query, visible_case_ids, can_modify_task, can_manage_content,
+    )
     from config import db, logger  # type: ignore
     from models import (  # type: ignore
         OnboardingCaseCreate, OnboardingCaseResponse,
@@ -46,6 +52,9 @@ async def export_cases_csv(
         query["status"] = case_status
     if case_type:
         query["case_type"] = case_type
+    scope_ids = await visible_case_ids(current_user)
+    if scope_ids is not None:
+        query["id"] = {"$in": scope_ids}
     cases = await db.cases.find(query, {"_id": 0}).to_list(5000)
 
     output = io.StringIO()
@@ -94,19 +103,20 @@ async def get_cases(
             {"employee_email": {"$regex": search, "$options": "i"}},
         ]
 
-    if current_user["role"] == "manager" and not current_user.get("is_super_admin"):
-        query["manager_email"] = current_user["email"]
-    elif current_user["role"] == "owner" and not current_user.get("is_super_admin"):
-        task_query = {"owner_email": current_user["email"], **get_org_filter(current_user)}
-        task_cases = await db.tasks.distinct("case_id", task_query)
-        query["id"] = {"$in": task_cases}
+    # Role-based case visibility: admin/superior see all, manager sees cases with
+    # tasks in their department, user sees cases where they have their own tasks.
+    scope_ids = await visible_case_ids(current_user)
+    if scope_ids is not None:
+        query["id"] = {"$in": scope_ids}
 
     cases = await db.cases.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     if not cases:
         return []
 
     case_ids = [c["id"] for c in cases]
-    all_tasks = await db.tasks.find({"case_id": {"$in": case_ids}}, {"_id": 0}).to_list(10000)
+    # Only attach tasks the user is allowed to see (managers: department, users: own)
+    task_query = await task_scope_query(current_user)
+    all_tasks = await db.tasks.find({**task_query, "case_id": {"$in": case_ids}}, {"_id": 0}).to_list(10000)
 
     task_ids = [t["id"] for t in all_tasks]
     if task_ids:
@@ -153,7 +163,13 @@ async def get_case(case_id: str, current_user: dict = Depends(get_current_user))
     case.setdefault("new_role", None)
     case.setdefault("old_role", None)
 
-    tasks = await db.tasks.find({"case_id": case_id}, {"_id": 0}).to_list(100)
+    # Tasks the current user may see within this case
+    task_query = await task_scope_query(current_user)
+    tasks = await db.tasks.find({**task_query, "case_id": case_id}, {"_id": 0}).to_list(100)
+
+    # Users/managers may only open cases in which they have visible tasks
+    if not can_manage_content(current_user) and not tasks:
+        raise HTTPException(status_code=403, detail="Kein Zugriff auf diesen Vorgang")
 
     if tasks:
         task_ids = [t["id"] for t in tasks]
@@ -178,7 +194,7 @@ async def get_case(case_id: str, current_user: dict = Depends(get_current_user))
 
 
 @router.post("/cases", response_model=OnboardingCaseResponse)
-async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(get_current_user)):
+async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(require_superior_or_admin)):
     org_id = current_user.get("organization_id")
     if org_id:
         allowed, message = await check_limit(org_id, "cases", 1)
@@ -271,7 +287,7 @@ async def create_case(data: OnboardingCaseCreate, current_user: dict = Depends(g
 
 
 @router.get("/employees/for-offboarding")
-async def get_employees_for_offboarding(current_user: dict = Depends(get_current_user)):
+async def get_employees_for_offboarding(current_user: dict = Depends(require_superior_or_admin)):
     query = {"case_type": {"$in": ["onboarding", None]}, **get_org_filter(current_user)}
     cases = await db.cases.find(
         query,
@@ -296,7 +312,7 @@ async def get_employees_for_offboarding(current_user: dict = Depends(get_current
 
 
 @router.patch("/cases/{case_id}/reschedule")
-async def reschedule_case(case_id: str, data: RescheduleRequest, current_user: dict = Depends(get_current_user)):
+async def reschedule_case(case_id: str, data: RescheduleRequest, current_user: dict = Depends(require_superior_or_admin)):
     query = {"id": case_id, **get_org_filter(current_user)}
     case = await db.cases.find_one(query, {"_id": 0})
     if not case:
@@ -314,7 +330,7 @@ async def reschedule_case(case_id: str, data: RescheduleRequest, current_user: d
 
 
 @router.patch("/cases/{case_id}/status")
-async def update_case_status(case_id: str, new_status: str, current_user: dict = Depends(get_current_user)):
+async def update_case_status(case_id: str, new_status: str, current_user: dict = Depends(require_superior_or_admin)):
     if new_status not in ["active", "completed"]:
         raise HTTPException(status_code=400, detail="Ungültiger Status")
     query = {"id": case_id, **get_org_filter(current_user)}
@@ -338,23 +354,8 @@ async def update_case_status(case_id: str, new_status: str, current_user: dict =
 
 @router.get("/tasks/my-tasks", response_model=List[TaskResponse])
 async def get_my_tasks(current_user: dict = Depends(get_current_user)):
-    org_filter = get_org_filter(current_user)
-    is_admin = current_user.get("role") == "admin" or current_user.get("is_super_admin")
-    user_department_id = current_user.get("department_id")
-
-    if is_admin:
-        query = org_filter
-    elif user_department_id:
-        department_roles = await db.owner_roles.find(
-            {"department_id": user_department_id, **org_filter}, {"_id": 0, "name": 1}
-        ).to_list(100)
-        role_names = [r["name"] for r in department_roles]
-        if role_names:
-            query = {"owner_role_snapshot": {"$in": role_names}, **org_filter}
-        else:
-            query = {"owner_email": current_user["email"], **org_filter}
-    else:
-        query = {"owner_email": current_user["email"], **org_filter}
+    # admin/superior: all org tasks · manager: own department · user: own tasks
+    query = await task_scope_query(current_user)
 
     tasks = await db.tasks.find(query, {"_id": 0}).to_list(1000)
 
@@ -398,6 +399,9 @@ async def update_task_status(task_id: str, new_status: str, current_user: dict =
     if not task:
         raise HTTPException(status_code=404, detail="Task nicht gefunden")
 
+    if not await can_modify_task(current_user, task):
+        raise HTTPException(status_code=403, detail="Keine Berechtigung für diese Aufgabe")
+
     if new_status == "done" and task.get("depends_on"):
         dep_task = await db.tasks.find_one({"id": task["depends_on"]}, {"_id": 0, "status": 1, "title": 1})
         if dep_task and dep_task.get("status") != "done":
@@ -433,9 +437,8 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     seven_days = now + timedelta(days=7)
     org_filter = get_org_filter(current_user)
 
-    query = {**org_filter}
-    if current_user["role"] == "owner" and not current_user.get("is_super_admin"):
-        query["owner_email"] = current_user["email"]
+    # Tasks scoped to what the user may see
+    query = await task_scope_query(current_user)
 
     all_tasks = await db.tasks.find(query, {"_id": 0}).to_list(10000)
 
@@ -460,8 +463,9 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
                 logger.warning(f"Failed to parse due_date {t['due_date']}: {e}")
 
     case_query = {**org_filter}
-    if current_user["role"] == "manager" and not current_user.get("is_super_admin"):
-        case_query["manager_email"] = current_user["email"]
+    scope_ids = await visible_case_ids(current_user)
+    if scope_ids is not None:
+        case_query["id"] = {"$in": scope_ids}
 
     active = await db.cases.count_documents({**case_query, "status": "active", "case_type": {"$in": ["onboarding", None]}})
     completed = await db.cases.count_documents({**case_query, "status": "completed", "case_type": {"$in": ["onboarding", None]}})
@@ -486,9 +490,15 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
 
 @router.get("/cases/{case_id}/report")
 async def get_case_report(case_id: str, current_user: dict = Depends(get_current_user)):
-    case = await db.cases.find_one({"id": case_id}, {"_id": 0})
+    case = await db.cases.find_one({"id": case_id, **get_org_filter(current_user)}, {"_id": 0})
     if not case:
         raise HTTPException(status_code=404, detail="Case nicht gefunden")
+
+    # Only content managers or users with visible tasks in this case may export it
+    if not can_manage_content(current_user):
+        scope = await task_scope_query(current_user)
+        if await db.tasks.count_documents({**scope, "case_id": case_id}) == 0:
+            raise HTTPException(status_code=403, detail="Kein Zugriff auf diesen Vorgang")
 
     tasks = await db.tasks.find({"case_id": case_id}, {"_id": 0}).to_list(100)
     settings = await db.settings.find_one({}, {"_id": 0}) or {"org_name": "Meine Firma"}

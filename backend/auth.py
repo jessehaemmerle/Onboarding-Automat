@@ -74,15 +74,51 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     return user
 
 
+# ============ ROLES ============
+# Fine-grained role model:
+#   admin    -> full access (org administration, users, settings, billing)
+#   superior -> manage templates, onboardings/cases and their building blocks
+#               (categories, owner-roles, departments, evidence policies)
+#   manager  -> view AND edit all tasks of their own department
+#   user     -> view/complete only their own tasks
+ROLE_ADMIN = "admin"
+ROLE_SUPERIOR = "superior"
+ROLE_MANAGER = "manager"
+ROLE_USER = "user"
+VALID_ROLES = [ROLE_ADMIN, ROLE_SUPERIOR, ROLE_MANAGER, ROLE_USER]
+
+
+def normalize_role(role) -> str:
+    """Map legacy/unknown roles (owner, readonly, None) to 'user'."""
+    return role if role in VALID_ROLES else ROLE_USER
+
+
+def is_admin(user: dict) -> bool:
+    return bool(user.get("is_super_admin")) or normalize_role(user.get("role")) == ROLE_ADMIN
+
+
+def can_manage_content(user: dict) -> bool:
+    """admin or superior — may manage templates, cases and their building blocks."""
+    return bool(user.get("is_super_admin")) or normalize_role(user.get("role")) in (ROLE_ADMIN, ROLE_SUPERIOR)
+
+
 async def require_admin(current_user: dict = Depends(get_current_user)):
-    if current_user.get("role") != "admin" and not current_user.get("is_super_admin"):
+    if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="Admin-Rechte erforderlich")
     return current_user
 
 
+async def require_superior_or_admin(current_user: dict = Depends(get_current_user)):
+    if not can_manage_content(current_user):
+        raise HTTPException(status_code=403, detail="Superior- oder Admin-Rechte erforderlich")
+    return current_user
+
+
 async def require_manager_or_admin(current_user: dict = Depends(get_current_user)):
-    if current_user.get("role") not in ["admin", "manager"] and not current_user.get("is_super_admin"):
-        raise HTTPException(status_code=403, detail="Admin-Berechtigung erforderlich")
+    """Staff-level access: admin, superior or manager."""
+    role = normalize_role(current_user.get("role"))
+    if not (current_user.get("is_super_admin") or role in (ROLE_ADMIN, ROLE_SUPERIOR, ROLE_MANAGER)):
+        raise HTTPException(status_code=403, detail="Mindestens Manager-Rechte erforderlich")
     return current_user
 
 
@@ -90,6 +126,61 @@ async def require_super_admin(current_user: dict = Depends(get_current_user)):
     if not current_user.get("is_super_admin"):
         raise HTTPException(status_code=403, detail="Super-Admin-Rechte erforderlich")
     return current_user
+
+
+# ============ TASK / CASE VISIBILITY ============
+
+async def department_role_names(user: dict) -> list:
+    """Owner-role names belonging to the user's department (for manager scope)."""
+    dept = user.get("department_id")
+    if not dept:
+        return []
+    roles = await db.owner_roles.find(
+        {"department_id": dept, **get_org_filter(user)}, {"_id": 0, "name": 1}
+    ).to_list(500)
+    return [r["name"] for r in roles]
+
+
+async def task_scope_query(user: dict) -> dict:
+    """Mongo filter for the tasks a user is allowed to see/act on."""
+    if user.get("is_super_admin"):
+        return {}
+    org = get_org_filter(user)
+    role = normalize_role(user.get("role"))
+    if role in (ROLE_ADMIN, ROLE_SUPERIOR):
+        return dict(org)
+    if role == ROLE_MANAGER:
+        names = await department_role_names(user)
+        conds = [{"owner_email": user.get("email")}]
+        if names:
+            conds.append({"owner_role_snapshot": {"$in": names}})
+        return {**org, "$or": conds}
+    # plain user
+    return {**org, "owner_email": user.get("email")}
+
+
+async def can_modify_task(user: dict, task: dict) -> bool:
+    """Whether the user may change a specific task (status, etc.)."""
+    if user.get("is_super_admin"):
+        return True
+    role = normalize_role(user.get("role"))
+    if role in (ROLE_ADMIN, ROLE_SUPERIOR):
+        return True
+    if task.get("owner_email") and task.get("owner_email") == user.get("email"):
+        return True
+    if role == ROLE_MANAGER:
+        names = await department_role_names(user)
+        return task.get("owner_role_snapshot") in names
+    return False
+
+
+async def visible_case_ids(user: dict):
+    """Return None when the user may see all org cases, otherwise the list of
+    case ids that contain at least one task the user is allowed to see."""
+    if user.get("is_super_admin") or can_manage_content(user):
+        return None
+    tq = await task_scope_query(user)
+    return await db.tasks.distinct("case_id", tq)
 
 
 def verify_master_key(key: str):

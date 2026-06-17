@@ -53,7 +53,7 @@ class AdminOrgCreate(BaseModel):
 class UserBase(BaseModel):
     email: EmailStr
     name: str
-    role: str = "owner"
+    role: str = "user"  # admin, superior, manager, user
     department_id: Optional[str] = None
 
 class UserCreate(UserBase):

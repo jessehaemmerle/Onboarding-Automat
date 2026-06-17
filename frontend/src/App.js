@@ -70,6 +70,20 @@ const AppShell = () => {
   return <Layout />;
 };
 
+// Content managers only (admin/superior): templates, onboardings, building blocks
+const RequireContent = ({ children }) => {
+  const { canManageContent, loading } = useAuth();
+  if (loading) return <Spinner />;
+  return canManageContent ? children : <Navigate to="/" replace />;
+};
+
+// Admin only: user management, billing, audit log
+const RequireAdmin = ({ children }) => {
+  const { isAdmin, loading } = useAuth();
+  if (loading) return <Spinner />;
+  return isAdmin ? children : <Navigate to="/" replace />;
+};
+
 // Route für Super-Admin-Bereich
 const SuperAdminRoute = ({ children }) => {
   const { user, loading, isSuperAdmin } = useAuth();
@@ -111,18 +125,18 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="cases" element={<Cases />} />
             <Route path="cases/:id" element={<CaseDetail />} />
-            <Route path="new-onboarding" element={<NewOnboarding />} />
-            <Route path="new-offboarding" element={<NewOffboarding />} />
-            <Route path="new-rolechange" element={<NewRoleChange />} />
-            <Route path="templates" element={<Templates />} />
-            <Route path="templates/:id" element={<TemplateEditor />} />
-            <Route path="templates/new" element={<TemplateEditor />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="evidence-policies" element={<EvidencePolicies />} />
-            <Route path="billing" element={<Billing />} />
-            <Route path="user-management" element={<OrgUserManagement />} />
-            <Route path="audit-log" element={<AuditLog />} />
+            <Route path="new-onboarding" element={<RequireContent><NewOnboarding /></RequireContent>} />
+            <Route path="new-offboarding" element={<RequireContent><NewOffboarding /></RequireContent>} />
+            <Route path="new-rolechange" element={<RequireContent><NewRoleChange /></RequireContent>} />
+            <Route path="templates" element={<RequireContent><Templates /></RequireContent>} />
+            <Route path="templates/:id" element={<RequireContent><TemplateEditor /></RequireContent>} />
+            <Route path="templates/new" element={<RequireContent><TemplateEditor /></RequireContent>} />
+            <Route path="settings" element={<RequireContent><Settings /></RequireContent>} />
+            <Route path="analytics" element={<RequireContent><Analytics /></RequireContent>} />
+            <Route path="evidence-policies" element={<RequireContent><EvidencePolicies /></RequireContent>} />
+            <Route path="billing" element={<RequireAdmin><Billing /></RequireAdmin>} />
+            <Route path="user-management" element={<RequireAdmin><OrgUserManagement /></RequireAdmin>} />
+            <Route path="audit-log" element={<RequireAdmin><AuditLog /></RequireAdmin>} />
             <Route path="privacy" element={<PrivacyCenter />} />
           </Route>
         </Routes>

@@ -7,10 +7,10 @@ from enum import Enum
 import uuid
 
 try:
-    from ..auth import get_current_user, require_manager_or_admin, require_super_admin
+    from ..auth import get_current_user, require_admin, require_manager_or_admin, require_super_admin
     from ..config import db, logger
 except ImportError:  # pragma: no cover - fallback for direct module execution
-    from auth import get_current_user, require_manager_or_admin, require_super_admin  # type: ignore
+    from auth import get_current_user, require_admin, require_manager_or_admin, require_super_admin  # type: ignore
     from config import db, logger  # type: ignore
 
 router = APIRouter(prefix="/billing", tags=["Billing & Monetization"])
@@ -243,7 +243,7 @@ async def get_available_tiers():
     return tiers
 
 @router.get("/usage", response_model=UsageResponse)
-async def get_usage(current_user: dict = Depends(require_manager_or_admin)):
+async def get_usage(current_user: dict = Depends(require_admin)):
     """Get current usage and limits for the organization"""
     org_id = current_user.get("organization_id")
     if not org_id:
@@ -284,7 +284,7 @@ async def get_usage(current_user: dict = Depends(require_manager_or_admin)):
     )
 
 @router.get("/subscription")
-async def get_subscription(current_user: dict = Depends(require_manager_or_admin)):
+async def get_subscription(current_user: dict = Depends(require_admin)):
     """Get subscription details for the organization"""
     org_id = current_user.get("organization_id")
     if not org_id:
@@ -312,7 +312,7 @@ async def check_resource_limit(resource: str, amount: int = 1, current_user: dic
     return {"allowed": allowed, "message": message}
 
 @router.post("/upgrade")
-async def request_upgrade(request: UpgradeRequest, current_user: dict = Depends(require_manager_or_admin)):
+async def request_upgrade(request: UpgradeRequest, current_user: dict = Depends(require_admin)):
     """Request an upgrade to a higher tier"""
     org_id = current_user.get("organization_id")
     if not org_id:

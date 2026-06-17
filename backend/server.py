@@ -21,9 +21,11 @@ try:
         get_org_filter,
         get_password_hash,
         require_admin,
+        require_superior_or_admin,
         require_super_admin,
         verify_master_key,
         verify_password,
+        VALID_ROLES,
     )
     from .config import client, db, logger, APP_URL
     from .routers.notifications import send_email
@@ -35,9 +37,11 @@ except ImportError:  # pragma: no cover - fallback for direct module execution
         get_org_filter,
         get_password_hash,
         require_admin,
+        require_superior_or_admin,
         require_super_admin,
         verify_master_key,
         verify_password,
+        VALID_ROLES,
     )
     from config import client, db, logger, APP_URL  # type: ignore
     from routers.notifications import send_email  # type: ignore
@@ -288,7 +292,7 @@ class AdminOrgCreate(BaseModel):
 class UserBase(BaseModel):
     email: EmailStr
     name: str
-    role: str = "owner"  # admin, manager, owner, readonly
+    role: str = "user"  # admin, superior, manager, user
     department_id: Optional[str] = None
 
 class UserCreate(UserBase):
@@ -1413,8 +1417,8 @@ async def create_org_user(user_data: OrgUserCreate, current_user: dict = Depends
         raise HTTPException(status_code=400, detail="Diese E-Mail-Adresse ist bereits registriert")
     
     # Validate role
-    if user_data.role not in ["user", "admin"]:
-        raise HTTPException(status_code=400, detail="Rolle muss 'user' oder 'admin' sein")
+    if user_data.role not in VALID_ROLES:
+        raise HTTPException(status_code=400, detail=f"Ungültige Rolle. Erlaubt: {', '.join(VALID_ROLES)}")
     
     # Check user limit for organization
     org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
@@ -1492,8 +1496,8 @@ async def get_org_info(current_user: dict = Depends(require_admin)):
 @api_router.patch("/org/users/{user_id}/role")
 async def update_org_user_role(user_id: str, role: str, current_user: dict = Depends(require_admin)):
     """Change role of a user in the organization - Org Admin only"""
-    if role not in ["user", "admin"]:
-        raise HTTPException(status_code=400, detail="Rolle muss 'user' oder 'admin' sein")
+    if role not in VALID_ROLES:
+        raise HTTPException(status_code=400, detail=f"Ungültige Rolle. Erlaubt: {', '.join(VALID_ROLES)}")
     
     org_id = current_user.get("organization_id")
     if not org_id:
@@ -1947,8 +1951,8 @@ async def get_users(current_user: dict = Depends(get_current_user)):
 
 @api_router.patch("/users/{user_id}")
 async def update_user(user_id: str, role: str, admin: dict = Depends(require_admin)):
-    if role not in ["admin", "manager", "owner", "readonly"]:
-        raise HTTPException(status_code=400, detail="Ungültige Rolle")
+    if role not in VALID_ROLES:
+        raise HTTPException(status_code=400, detail=f"Ungültige Rolle. Erlaubt: {', '.join(VALID_ROLES)}")
     
     old_user = await db.users.find_one({"id": user_id}, {"_id": 0})
     old_role = old_user.get("role") if old_user else None
@@ -1985,7 +1989,7 @@ async def _name_taken(collection, org_id: str, name: str) -> bool:
     return existing is not None
 
 @api_router.post("/owner-roles", response_model=OwnerRoleResponse)
-async def create_owner_role(data: OwnerRoleCreate, admin: dict = Depends(require_admin)):
+async def create_owner_role(data: OwnerRoleCreate, admin: dict = Depends(require_superior_or_admin)):
     name = data.name.strip()
     if await _name_taken(db.owner_roles, admin["organization_id"], name):
         raise HTTPException(status_code=400, detail=f"Rolle '{name}' existiert bereits")
@@ -2001,7 +2005,7 @@ async def create_owner_role(data: OwnerRoleCreate, admin: dict = Depends(require
     return OwnerRoleResponse(**doc)
 
 @api_router.put("/owner-roles/{role_id}", response_model=OwnerRoleResponse)
-async def update_owner_role(role_id: str, data: OwnerRoleCreate, admin: dict = Depends(require_admin)):
+async def update_owner_role(role_id: str, data: OwnerRoleCreate, admin: dict = Depends(require_superior_or_admin)):
     query = {"id": role_id, **get_org_filter(admin)}
     await db.owner_roles.update_one(query, {"$set": {"name": data.name, "emails": data.emails, "department_id": data.department_id}})
     updated = await db.owner_roles.find_one(query, {"_id": 0})
@@ -2010,7 +2014,7 @@ async def update_owner_role(role_id: str, data: OwnerRoleCreate, admin: dict = D
     return OwnerRoleResponse(**updated)
 
 @api_router.delete("/owner-roles/{role_id}")
-async def delete_owner_role(role_id: str, admin: dict = Depends(require_admin)):
+async def delete_owner_role(role_id: str, admin: dict = Depends(require_superior_or_admin)):
     query = {"id": role_id, **get_org_filter(admin)}
     result = await db.owner_roles.delete_one(query)
     if result.deleted_count == 0:
@@ -2026,7 +2030,7 @@ async def get_categories(current_user: dict = Depends(get_current_user)):
     return [CategoryResponse(**c) for c in categories]
 
 @api_router.post("/categories", response_model=CategoryResponse)
-async def create_category(data: CategoryCreate, admin: dict = Depends(require_admin)):
+async def create_category(data: CategoryCreate, admin: dict = Depends(require_superior_or_admin)):
     name = data.name.strip()
     if await _name_taken(db.categories, admin["organization_id"], name):
         raise HTTPException(status_code=400, detail=f"Kategorie '{name}' existiert bereits")
@@ -2041,7 +2045,7 @@ async def create_category(data: CategoryCreate, admin: dict = Depends(require_ad
     return CategoryResponse(**doc)
 
 @api_router.put("/categories/{category_id}", response_model=CategoryResponse)
-async def update_category(category_id: str, data: CategoryCreate, admin: dict = Depends(require_admin)):
+async def update_category(category_id: str, data: CategoryCreate, admin: dict = Depends(require_superior_or_admin)):
     query = {"id": category_id, **get_org_filter(admin)}
     await db.categories.update_one(query, {"$set": {"name": data.name, "color": data.color}})
     updated = await db.categories.find_one(query, {"_id": 0})
@@ -2050,7 +2054,7 @@ async def update_category(category_id: str, data: CategoryCreate, admin: dict = 
     return CategoryResponse(**updated)
 
 @api_router.delete("/categories/{category_id}")
-async def delete_category(category_id: str, admin: dict = Depends(require_admin)):
+async def delete_category(category_id: str, admin: dict = Depends(require_superior_or_admin)):
     query = {"id": category_id, **get_org_filter(admin)}
     result = await db.categories.delete_one(query)
     if result.deleted_count == 0:
@@ -2066,7 +2070,7 @@ async def get_departments(current_user: dict = Depends(get_current_user)):
     return [DepartmentResponse(**d) for d in departments]
 
 @api_router.post("/departments", response_model=DepartmentResponse)
-async def create_department(data: DepartmentCreate, admin: dict = Depends(require_admin)):
+async def create_department(data: DepartmentCreate, admin: dict = Depends(require_superior_or_admin)):
     name = data.name.strip()
     if await _name_taken(db.departments, admin["organization_id"], name):
         raise HTTPException(status_code=400, detail=f"Abteilung '{name}' existiert bereits")
@@ -2081,7 +2085,7 @@ async def create_department(data: DepartmentCreate, admin: dict = Depends(requir
     return DepartmentResponse(**doc)
 
 @api_router.put("/departments/{department_id}", response_model=DepartmentResponse)
-async def update_department(department_id: str, data: DepartmentCreate, admin: dict = Depends(require_admin)):
+async def update_department(department_id: str, data: DepartmentCreate, admin: dict = Depends(require_superior_or_admin)):
     query = {"id": department_id, **get_org_filter(admin)}
     await db.departments.update_one(query, {"$set": {"name": data.name, "color": data.color}})
     updated = await db.departments.find_one(query, {"_id": 0})
@@ -2090,7 +2094,7 @@ async def update_department(department_id: str, data: DepartmentCreate, admin: d
     return DepartmentResponse(**updated)
 
 @api_router.delete("/departments/{department_id}")
-async def delete_department(department_id: str, admin: dict = Depends(require_admin)):
+async def delete_department(department_id: str, admin: dict = Depends(require_superior_or_admin)):
     query = {"id": department_id, **get_org_filter(admin)}
     result = await db.departments.delete_one(query)
     if result.deleted_count == 0:

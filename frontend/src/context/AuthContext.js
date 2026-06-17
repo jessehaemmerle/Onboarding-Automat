@@ -62,11 +62,16 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const isAdmin = user?.role === "admin" || user?.is_super_admin;
   const isSuperAdmin = user?.is_super_admin || false;
+  const role = user?.role || null;
+  // Fine-grained roles: admin > superior > manager > user
+  const isAdmin = role === "admin" || isSuperAdmin;
+  // admin or superior — may manage templates, onboardings and their building blocks
+  const canManageContent = isAdmin || role === "superior";
+  const isManager = role === "manager";
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser, isAdmin, isSuperAdmin }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser, role, isAdmin, isSuperAdmin, canManageContent, isManager }}>
       {children}
     </AuthContext.Provider>
   );

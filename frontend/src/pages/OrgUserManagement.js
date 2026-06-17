@@ -37,7 +37,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-
+
+// Fine-grained roles
+const ROLE_OPTIONS = [
+  { value: "user", label: "Benutzer", hint: "Sieht nur eigene Aufgaben" },
+  { value: "manager", label: "Manager", hint: "Sieht & bearbeitet alle Aufgaben seiner Abteilung" },
+  { value: "superior", label: "Superior", hint: "Verwaltet Templates & Onboardings" },
+  { value: "admin", label: "Administrator", hint: "Vollzugriff" },
+];
+const ROLE_LABELS = ROLE_OPTIONS.reduce((acc, r) => ({ ...acc, [r.value]: r.label }), {});
+const roleLabel = (role) => ROLE_LABELS[role] || "Benutzer";
+
 
 export default function OrgUserManagement() {
   const { user, isAdmin } = useAuth();
@@ -331,7 +341,7 @@ export default function OrgUserManagement() {
                             <Badge variant="outline" className="text-xs">Sie</Badge>
                           )}
                           <Badge variant={targetUser.role === "admin" ? "default" : "secondary"} className="text-xs">
-                            {targetUser.role === "admin" ? "Admin" : "Benutzer"}
+                            {roleLabel(targetUser.role)}
                           </Badge>
                           {targetUser.department_name && (
                             <Badge variant="outline" className="text-xs">
@@ -480,10 +490,14 @@ export default function OrgUserManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">Benutzer</SelectItem>
-                  <SelectItem value="admin">Administrator</SelectItem>
+                  {ROLE_OPTIONS.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-slate-500">
+                {ROLE_OPTIONS.find((r) => r.value === newUser.role)?.hint}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="new-department">Abteilung</Label>
@@ -591,10 +605,14 @@ export default function OrgUserManagement() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">Benutzer</SelectItem>
-                <SelectItem value="admin">Administrator</SelectItem>
+                {ROLE_OPTIONS.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-slate-500">
+              {ROLE_OPTIONS.find((r) => r.value === newRole)?.hint}
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRoleDialog(false)}>

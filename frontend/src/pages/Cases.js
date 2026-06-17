@@ -12,9 +12,11 @@ import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Search, Plus, Calendar, ArrowUpDown, Users, UserMinus, Paperclip, RefreshCw, FilterX, Download, CheckSquare, XSquare } from "lucide-react";
 import { format, parseISO, isPast } from "date-fns";
 import { de } from "date-fns/locale";
+import { useAuth } from "../context/AuthContext";
 
 
 export default function Cases() {
+  const { canManageContent } = useAuth();
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -146,15 +148,19 @@ export default function Cases() {
           <Button onClick={exportCSV} variant="outline" className="gap-2" data-testid="export-csv">
             <Download className="w-4 h-4" /> CSV
           </Button>
-          <Button onClick={() => navigate("/new-onboarding")} className="btn-primary gap-2" data-testid="new-onboarding">
-            <Plus className="w-4 h-4" /> Onboarding
-          </Button>
-          <Button onClick={() => navigate("/new-offboarding")} variant="outline" className="gap-2" data-testid="new-offboarding">
-            <UserMinus className="w-4 h-4" /> Offboarding
-          </Button>
-          <Button onClick={() => navigate("/new-rolechange")} variant="outline" className="gap-2 bg-orange-50 hover:bg-orange-100 border-orange-200" data-testid="new-rolechange">
-            <RefreshCw className="w-4 h-4" /> Rollenwechsel
-          </Button>
+          {canManageContent && (
+            <>
+              <Button onClick={() => navigate("/new-onboarding")} className="btn-primary gap-2" data-testid="new-onboarding">
+                <Plus className="w-4 h-4" /> Onboarding
+              </Button>
+              <Button onClick={() => navigate("/new-offboarding")} variant="outline" className="gap-2" data-testid="new-offboarding">
+                <UserMinus className="w-4 h-4" /> Offboarding
+              </Button>
+              <Button onClick={() => navigate("/new-rolechange")} variant="outline" className="gap-2 bg-orange-50 hover:bg-orange-100 border-orange-200" data-testid="new-rolechange">
+                <RefreshCw className="w-4 h-4" /> Rollenwechsel
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -249,18 +255,20 @@ export default function Cases() {
                    caseTypeFilter === "rolechange" ? "Starten Sie einen Rollenwechsel" :
                    "Starten Sie Ihr erstes Onboarding"}
                 </p>
-                <Button
-                  onClick={() => navigate(
-                    caseTypeFilter === "offboarding" ? "/new-offboarding" :
-                    caseTypeFilter === "rolechange" ? "/new-rolechange" : "/new-onboarding"
-                  )}
-                  className="btn-primary"
-                  data-testid="start-case"
-                >
-                  {caseTypeFilter === "offboarding" ? "Offboarding starten" :
-                   caseTypeFilter === "rolechange" ? "Rollenwechsel starten" :
-                   "Onboarding starten"}
-                </Button>
+                {canManageContent && (
+                  <Button
+                    onClick={() => navigate(
+                      caseTypeFilter === "offboarding" ? "/new-offboarding" :
+                      caseTypeFilter === "rolechange" ? "/new-rolechange" : "/new-onboarding"
+                    )}
+                    className="btn-primary"
+                    data-testid="start-case"
+                  >
+                    {caseTypeFilter === "offboarding" ? "Offboarding starten" :
+                     caseTypeFilter === "rolechange" ? "Rollenwechsel starten" :
+                     "Onboarding starten"}
+                  </Button>
+                )}
               </>
             )}
           </CardContent>

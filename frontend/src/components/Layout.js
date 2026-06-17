@@ -42,7 +42,7 @@ function useBreadcrumb() {
 }
 
 export default function Layout() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, canManageContent } = useAuth();
   const navigate = useNavigate();
   const breadcrumb = useBreadcrumb();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -69,19 +69,22 @@ export default function Layout() {
   const navItems = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
     { to: "/cases", label: "Vorgänge", icon: Users },
-    { to: "/templates", label: "Templates", icon: FolderKanban },
-    { to: "/analytics", label: "Analytics", icon: BarChart2 },
-    { to: "/settings", label: "Einstellungen", icon: Settings },
+    // Templates, Analytics & Einstellungen only for content managers (admin/superior)
+    ...(canManageContent ? [
+      { to: "/templates", label: "Templates", icon: FolderKanban },
+      { to: "/analytics", label: "Analytics", icon: BarChart2 },
+      { to: "/settings", label: "Einstellungen", icon: Settings },
+    ] : []),
   ];
 
-  const adminNavItems = isAdmin
-    ? [
-        { to: "/user-management", label: "Benutzerverwaltung", icon: Users },
-        { to: "/evidence-policies", label: "Nachweis-Richtlinien", icon: Shield },
-        { to: "/audit-log", label: "Audit-Log", icon: ScrollText },
-        { to: "/billing", label: "Abrechnung", icon: CreditCard },
-      ]
-    : [];
+  const adminNavItems = [
+    ...(isAdmin ? [{ to: "/user-management", label: "Benutzerverwaltung", icon: Users }] : []),
+    ...(canManageContent ? [{ to: "/evidence-policies", label: "Nachweis-Richtlinien", icon: Shield }] : []),
+    ...(isAdmin ? [
+      { to: "/audit-log", label: "Audit-Log", icon: ScrollText },
+      { to: "/billing", label: "Abrechnung", icon: CreditCard },
+    ] : []),
+  ];
 
   const SidebarContent = () => (
     <>
@@ -139,6 +142,7 @@ export default function Layout() {
         )}
       </nav>
 
+      {canManageContent && (
       <div className="p-4 border-t border-slate-100 space-y-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -176,6 +180,7 @@ export default function Layout() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      )}
     </>
   );
 

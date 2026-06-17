@@ -16,12 +16,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popove
 import { ArrowLeft, Calendar as CalendarIcon, Download, CheckCircle2, Circle, MessageSquare, Send, Clock, User, Mail, MapPin, FileText, Paperclip, Upload, Trash2, File, Image, UserMinus, RefreshCw, Lock } from "lucide-react";
 import { format, parseISO, isPast, isWithinInterval, addDays } from "date-fns";
 import { de } from "date-fns/locale";
-
+
 
 export default function CaseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, canManageContent, isManager } = useAuth();
   const [caseData, setCaseData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -257,20 +257,22 @@ export default function CaseDetail() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => setShowReschedule(true)} data-testid="reschedule-btn">
-            <CalendarIcon className="w-4 h-4 mr-2" /> Verschieben
-          </Button>
+          {canManageContent && (
+            <Button variant="outline" onClick={() => setShowReschedule(true)} data-testid="reschedule-btn">
+              <CalendarIcon className="w-4 h-4 mr-2" /> Verschieben
+            </Button>
+          )}
           <Button variant="outline" onClick={downloadReport} data-testid="download-report-btn">
             <Download className="w-4 h-4 mr-2" /> Report
           </Button>
-          {caseData.status === "active" ? (
-            <Button 
-              onClick={() => updateCaseStatus("completed")} 
+          {canManageContent && (caseData.status === "active" ? (
+            <Button
+              onClick={() => updateCaseStatus("completed")}
               className={
-                isOffboarding ? "bg-purple-600 hover:bg-purple-700 text-white" : 
-                isRoleChange ? "bg-orange-600 hover:bg-orange-700 text-white" : 
+                isOffboarding ? "bg-purple-600 hover:bg-purple-700 text-white" :
+                isRoleChange ? "bg-orange-600 hover:bg-orange-700 text-white" :
                 "btn-primary"
-              } 
+              }
               data-testid="complete-btn"
             >
               <CheckCircle2 className="w-4 h-4 mr-2" /> Abschließen
@@ -279,7 +281,7 @@ export default function CaseDetail() {
             <Button onClick={() => updateCaseStatus("active")} variant="secondary" data-testid="reopen-btn">
               Wieder öffnen
             </Button>
-          )}
+          ))}
         </div>
       </div>
 
@@ -345,7 +347,9 @@ export default function CaseDetail() {
                 urgent: "border-l-amber-500 bg-amber-50/50",
                 normal: "border-l-slate-300",
               };
-              const canEdit = isAdmin || task.owner_email === user?.email;
+              // Content managers edit any task; managers see only their department's
+              // tasks here (backend-filtered) so they may edit those; users edit own.
+              const canEdit = canManageContent || isManager || task.owner_email === user?.email;
               const needsEvidence = task.evidence_required && !task.evidence_uploaded && task.status === "open";
               const isBlocked = task.is_blocked;
               // Find the blocking task's title
@@ -543,7 +547,7 @@ export default function CaseDetail() {
                             <Button variant="ghost" size="sm" onClick={() => downloadEvidence(ev)} data-testid={`download-evidence-${ev.id}`}>
                               <Download className="w-4 h-4" />
                             </Button>
-                            {(ev.uploaded_by === user?.email || isAdmin) && (
+                            {(ev.uploaded_by === user?.email || canManageContent) && (
                               <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => deleteEvidence(ev)} data-testid={`delete-evidence-${ev.id}`}>
                                 <Trash2 className="w-4 h-4" />
                               </Button>
