@@ -11,6 +11,7 @@ import asyncio
 import secrets
 import hashlib
 import string
+import re
 
 try:
     from .auth import (
@@ -1975,12 +1976,23 @@ async def get_owner_roles(current_user: dict = Depends(get_current_user)):
     roles = await db.owner_roles.find(query, {"_id": 0}).to_list(100)
     return [OwnerRoleResponse(**r) for r in roles]
 
+async def _name_taken(collection, org_id: str, name: str) -> bool:
+    """Case-insensitive check whether a name already exists within an organization."""
+    existing = await collection.find_one(
+        {"organization_id": org_id, "name": {"$regex": f"^{re.escape(name.strip())}$", "$options": "i"}},
+        {"_id": 1},
+    )
+    return existing is not None
+
 @api_router.post("/owner-roles", response_model=OwnerRoleResponse)
 async def create_owner_role(data: OwnerRoleCreate, admin: dict = Depends(require_admin)):
+    name = data.name.strip()
+    if await _name_taken(db.owner_roles, admin["organization_id"], name):
+        raise HTTPException(status_code=400, detail=f"Rolle '{name}' existiert bereits")
     role_id = str(uuid.uuid4())
     doc = {
         "id": role_id,
-        "name": data.name,
+        "name": name,
         "emails": data.emails,
         "department_id": data.department_id,
         "organization_id": admin["organization_id"]
@@ -2015,10 +2027,13 @@ async def get_categories(current_user: dict = Depends(get_current_user)):
 
 @api_router.post("/categories", response_model=CategoryResponse)
 async def create_category(data: CategoryCreate, admin: dict = Depends(require_admin)):
+    name = data.name.strip()
+    if await _name_taken(db.categories, admin["organization_id"], name):
+        raise HTTPException(status_code=400, detail=f"Kategorie '{name}' existiert bereits")
     category_id = str(uuid.uuid4())
     doc = {
         "id": category_id,
-        "name": data.name,
+        "name": name,
         "color": data.color,
         "organization_id": admin["organization_id"]
     }
@@ -2052,10 +2067,13 @@ async def get_departments(current_user: dict = Depends(get_current_user)):
 
 @api_router.post("/departments", response_model=DepartmentResponse)
 async def create_department(data: DepartmentCreate, admin: dict = Depends(require_admin)):
+    name = data.name.strip()
+    if await _name_taken(db.departments, admin["organization_id"], name):
+        raise HTTPException(status_code=400, detail=f"Abteilung '{name}' existiert bereits")
     department_id = str(uuid.uuid4())
     doc = {
         "id": department_id,
-        "name": data.name,
+        "name": name,
         "color": data.color,
         "organization_id": admin["organization_id"]
     }

@@ -10,7 +10,7 @@ import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Switch } from "../components/ui/switch";
 import { ArrowLeft, Plus, Trash2, GripVertical, Save, Loader2 } from "lucide-react";
-
+
 
 export default function TemplateEditor() {
   const { id } = useParams();
@@ -34,14 +34,25 @@ export default function TemplateEditor() {
     }
   }, [id]);
 
+  // Collapse entries with duplicate names — Select options use the name as value,
+  // so duplicates would mark multiple items as selected (e.g. "ITIT").
+  const dedupeByName = (items) => {
+    const seen = new Set();
+    return items.filter((it) => {
+      if (seen.has(it.name)) return false;
+      seen.add(it.name);
+      return true;
+    });
+  };
+
   const fetchOwnerRolesAndCategories = async () => {
     try {
       const [rolesRes, categoriesRes] = await Promise.all([
         api.get(`/owner-roles`),
         api.get(`/categories`)
       ]);
-      setOwnerRoles(rolesRes.data);
-      setCategories(categoriesRes.data);
+      setOwnerRoles(dedupeByName(rolesRes.data));
+      setCategories(dedupeByName(categoriesRes.data));
     } catch (err) {
       console.error(err);
     }
