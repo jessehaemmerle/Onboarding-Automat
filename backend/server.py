@@ -165,6 +165,11 @@ async def create_indexes():
         await db.password_resets.create_index("token_hash")
         await db.password_resets.create_index("user_id")
 
+        # Invoicing
+        await db.invoices.create_index("organization_id")
+        await db.invoices.create_index("invoice_number", unique=True)
+        await db.org_billing.create_index("organization_id", unique=True)
+
         logger.info("✅ Database indexes created successfully")
     except Exception as e:
         logger.warning(f"Index creation: {e} (may already exist)")
@@ -2861,6 +2866,7 @@ try:
     from .routers.templates_routes import router as templates_router
     from .routers.analytics import router as analytics_router
     from .routers.webhooks import router as webhooks_router
+    from .routers.invoices import router as invoices_router
     from .routers.notifications import daily_reminder_job
 except ImportError:  # pragma: no cover - fallback for direct module execution
     from routers.billing import check_limit, router as billing_router  # type: ignore
@@ -2869,6 +2875,7 @@ except ImportError:  # pragma: no cover - fallback for direct module execution
     from routers.templates_routes import router as templates_router  # type: ignore
     from routers.analytics import router as analytics_router  # type: ignore
     from routers.webhooks import router as webhooks_router  # type: ignore
+    from routers.invoices import router as invoices_router  # type: ignore
     from routers.notifications import daily_reminder_job  # type: ignore
 
 api_router.include_router(tasks_router)
@@ -2877,6 +2884,7 @@ api_router.include_router(cases_router)
 api_router.include_router(templates_router)
 api_router.include_router(analytics_router)
 api_router.include_router(webhooks_router)
+api_router.include_router(invoices_router)
 
 # Include main router with all routes
 app.include_router(api_router)

@@ -19,17 +19,33 @@ def _resend_client() -> bool:
     return True
 
 
-async def send_email(to: str, subject: str, html: str) -> bool:
+async def send_email(to: str, subject: str, html: str, attachments: Optional[list] = None) -> bool:
+    """Send an email via Resend.
+
+    attachments: optional list of dicts with keys ``filename`` and ``content``
+    (raw bytes). They are forwarded to Resend as file attachments.
+    """
     if not _resend_client():
         logger.warning("RESEND_API_KEY not set – skipping email")
         return False
     try:
-        resend.Emails.send({
+        params = {
             "from": SENDER_EMAIL,
             "to": to,
             "subject": subject,
             "html": html,
-        })
+        }
+        if attachments:
+            params["attachments"] = [
+                {
+                    "filename": att["filename"],
+                    # Resend Python SDK expects the file buffer as a list of bytes
+                    "content": list(att["content"]),
+                    "content_type": att.get("content_type", "application/octet-stream"),
+                }
+                for att in attachments
+            ]
+        await asyncio.to_thread(resend.Emails.send, params)
         return True
     except Exception as e:
         logger.error(f"Email send failed to {to}: {e}")

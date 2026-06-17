@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Shield, Key, Building2, LogOut, LayoutDashboard, Users, BarChart3, ScrollText } from "lucide-react";
+import { Shield, Key, Building2, LogOut, LayoutDashboard, Users, BarChart3, ScrollText, Receipt } from "lucide-react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "./ui/dropdown-menu";
@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 const adminNavItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Lizenzen & Orgs", end: true },
   { to: "/admin/users", icon: Users, label: "Benutzer" },
+  { to: "/admin/invoices", icon: Receipt, label: "Rechnungen" },
   { to: "/admin/stats", icon: BarChart3, label: "Statistiken" },
   { to: "/admin/audit-log", icon: ScrollText, label: "Audit-Log" },
 ];

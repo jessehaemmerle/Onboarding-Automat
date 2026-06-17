@@ -28,6 +28,7 @@ import OrgUserManagement from "./pages/OrgUserManagement";
 import AdminPanel from "./pages/AdminPanel";
 import AdminLogin from "./pages/AdminLogin";
 import AdminUsers from "./pages/AdminUsers";
+import AdminInvoices from "./pages/AdminInvoices";
 import AdminStats from "./pages/AdminStats";
 import AdminAuditLog from "./pages/AdminAuditLog";
 import Layout from "./components/Layout";
@@ -100,6 +101,7 @@ function App() {
             <Route index element={<AdminPanel />} />
             <Route path="dashboard" element={<AdminPanel />} />
             <Route path="users" element={<AdminUsers />} />
+            <Route path="invoices" element={<AdminInvoices />} />
             <Route path="stats" element={<AdminStats />} />
             <Route path="audit-log" element={<AdminAuditLog />} />
           </Route>
